@@ -24,9 +24,9 @@ Based on the setting data, output a JSON object with the following fields:
 Each monster type should then contain the following fields:
 1. name - Required, 1 or 2 words that names the kind of monster.
 2. description - Required, a short description of the monster.
-3. resistances - Optional, a list of types of damage the monster is resistant to. Could be elements, poison, physical attacks, etc.
-4. weaknesses - Optional, similar to resistances but a list of types of damage the monster is weak to.
-5. equipment - Optional, typically only humanoid monsters will have this.  Could be basic weapons likes clubs, etc.
+3. resistances - Optional (per monster type), a list of types of damage the monster is resistant to. Could be elements, poison, physical attacks, etc.
+4. weaknesses - Optional (per monster type), similar to resistances but a list of types of damage the monster is weak to.
+5. equipment - Optional (per monster type), typically only humanoid monsters will have this.  Could be basic weapons likes clubs, etc.
 """,
     "user_prompt": """Create some monsters to populate the Tolkein-esque fantasy world with the following setting:
 {}"""
@@ -99,6 +99,65 @@ Use the following setting information:
 {}
 """
   },
+  "build_town_map": {
+    "system_prompt": """"Role": "You are building a map for a text adventure game world",
+"Task": "Output a JSON object that describes a town map",
+"Output format": "1. A list called 'nodes' with elements that follow the node format
+2. a string called 'gate_direction' that notes at which edge of the map (north, east, west, south) the gate is located",
+"node format": "{{"unique_id": "string, a unique ID for each map node",
+"name": "string, the name of this node",
+"type": "string, the type of this node (see rules)",
+"description": "string, a brief one or two sentence description of the node",
+"connections": "a list of connections (see connection format)"}}",
+"connection format": "{{"connect_id": "A reference to the unique_id of the connecting node",
+"connect_name": "A reference to the name of the connecting node",
+"how": "A description of how this node connects to the other node.
+For town areas this can be roads and paths.",
+"direction": "the general direction of the connection"}}",
+"Rules": ["Node type must be the following:
+'town' - outdoor areas that are within town",
+"There should be 4 to 6 town nodes",
+"Every node must have at least one connection",
+"It must be possible to go from any node in this map to any other by following connections",
+"Town nodes can include things like outdoor markets, town squares, major streets, landmarks, etc.",
+"There must be exactly one city gate node at an edge of the map with unique_id 'city_gate'",
+"Make note of the direction (north, east, west, south) the city gate node is located at",
+"The city is enclosed by walls and only the gate leads outside of the city"
+]""",
+    "user_prompt": """Create a map of an original small city or town in a Tolkein-esque fantasy world.
+Use the following setting information:
+{}
+"""
+  },
+  "build_field_map": {
+    "system_prompt": """"Role": "You are building a map for a text adventure game world",
+"Task": "Output a JSON object that describes a field map",
+"Output format": "A list called 'nodes' with elements that follow the node format",
+"node format": "{{"unique_id": "string, a unique ID for each map node",
+"name": "string, the name of this node",
+"type": "string, the type of this node (see rules)",
+"description": "string, a brief one or two sentence description of the node",
+"connections": "a list of connections (see connection format)"}}",
+"connection format": "{{"connect_id": "A reference to the unique_id of the connecting node",
+"connect_name": "A reference to the name of the connecting node",
+"how": "A description of how this node connects to the other node.
+For field areas this can be roads and paths.",
+"direction": "the general direction of the connection"}}",
+"Rules": ["Node type must be the following:
+field' - outdoor areas that are outside of town",
+"There should be 5 to 8 'field' nodes",
+"Every node must have at least one connection",
+"It must be possible to go from any node in this map to any other by following connections",
+"Field' nodes can include things like lakes, rivers, forests, mountains, etc.",
+"There must be exactly one node with unique_id 'city_outskirts' that marks the outskirts of the city (the city is not part of this map)",
+"There must be exactly one node with unique_id 'field_to_dungeon' that marks the entrance to a dungeon (the dungeon is not part of this map)",
+"Start from the city entrance and build towards the dungeon entrance generally heading {}"
+]""",
+    "user_prompt": """Create a map of an outdoor area that neighbors a city or town in a Tolkein-esque fantasy world.
+Use the following setting information:
+{}
+"""
+  },
   "build_map2": {
     "system_prompt": """"Role": "You are building a map for a text adventure game world",
 "Task": "Output a JSON object that describes the game's map",
@@ -142,16 +201,15 @@ For field or town areas this can be roads, paths, etc.",
 "connection format": "{{"connect_id": "A reference to the unique_id of the connecting node",
 "connect_name": "A reference to the name of the connecting node",
 "how": "A description of how this node connects to the other node.
-For going from indoor to town areas there should be some sort of exit.
+For going from indoor to town areas there should be some sort of exit to the street.
 Between indoor areas there should be a door or passageway.",
-"direction": "the general direction of the connection"}}"
+"direction": "The general direction of the connection. Between indoor nodes this can also include stairs up and down"}}"
 "Rules": ["New nodes that are added must be of the type:
 'indoor' - interiors of buildings",
-"There should be 4 to 6 'indoor' nodes added",
-"'indoor' nodes can include things like taverns, blacksmiths, inns, guilds, storage rooms, etc.",
-"'indoor' nodes can only connect to 'town' nodes or to each other but the latter is less common",
-"'indoor' nodes should never connect to 'field' nodes",
-"It is fine if an indoor node connects to a town node in a direction where there's already another town node"
+"There should be 4 to 6 indoor nodes added",
+"Indoor nodes can include things like taverns, blacksmiths, inns, guilds, storage rooms, etc.",
+"Indoor nodes can only connect to 'town' nodes or to each other but the latter is less common",
+"For indoor nodes there does not have to be only one connection in a given direction"
 ]""",
     "user_prompt": """Given the existing map of a Tolkein-esque fantasy world, add new nodes to represent indoor areas.
 Existing map:
@@ -162,25 +220,20 @@ Use the following setting information:
   },
   "connect_indoor_areas": {
     "system_prompt": """"Role": "You are building a map for a text adventure game world",
-"Task": "Given the existing map and indoor nodes, output a JSON object that fixes connections",
-"Output format": "A list called 'nodes' with elements that follow the node format",
-"node format": "{{"unique_id": "string, a unique ID for each map node",
-"connections": "a list of connections (see connection format)"}}",
-"connection format": "{{"connect_id": "A reference to the unique_id of the connecting node",
-"connect_name": "A reference to the name of the connecting node",
-"how": "A description of how this node connects to the other node.
-When going from 'town' to 'indoor' areas there should be some sort of door or entrance",
-"direction": "the general direction of the connection"}}"
-"Rules": ["Don't create any new nodes",
-"Go through each of the indoor nodes one-by-one",
-"If there is a connection from the indoor node to a town node add a corresponding connection from that town node to the indoor node",
-"Only output modified node unique_ids and connections"
+"Task": "Given the existing map and the indoor node, output a JSON object that adds a reciprocal connection",
+"Output format": "A list called 'connections' with all the same properties as 'connections' in the existing map
+but also add a 'reference_id' property which is the unique_id of the node it is connecting from",
+"Rules": ["If there is a connection from the indoor node to a town node then add a corresponding connection from that town node to the indoor node",
+"The 'how' of connections from town nodes to indoor nodes should describe doors, entranceways, etc.",
+"There does not have to be only one connection in a given direction",
+"Only output the new connections",
+"If there is no connection from the indoor node to a town node then just return an empty list"
 ]""",
     "user_prompt": """Given the existing map and the list of indoor nodes, fix the connections so they are reciprocated.
 Existing map:
 {}
 
-Indoor nodes:
+Indoor node:
 {}"""
   },
   "build_dungeon_map": {
@@ -211,15 +264,15 @@ Use the following setting information:
 {}
 """
   },
-  "connect_dungeon": {
+  "connect_map": {
     "system_prompt": """"Role": "You are building a map for a text adventure game world",
 "Task": "Given the two existing maps, output a JSON object with creates connections between:
-1. the node with unique_id 'field_to_dungeon'
-2. the node with unique_id 'first_dungeon_node'",
+1. the node with unique_id '{0}'
+2. the node with unique_id '{1}'",
 "Output format": "Output a list called 'connections' that follows the format of connections in the existing maps",
 "Rules": ["There should be just two connections in the list",
-"The connection from 'field_to_dungeon' to 'first_dungeon_node' is first",
-"The connection from 'first_dungeon_node' to 'field_to_dungeon' is second"
+"The connection from '{0}' to '{1}' is first",
+"The connection from '{1}' to '{0}' is second"
 ]""",
     "user_prompt": """first map:
 {}
