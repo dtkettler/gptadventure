@@ -96,6 +96,12 @@ class State():
     def set_player(self, player):
         self.player = player
 
+    def set_present_monsters(self, monsters):
+        self.present_monsters = monsters
+
+    def get_present_monsters(self):
+        return self.present_monsters
+
     def add_companion(self, character_id):
         for character in self.world["characters"]:
             if character["unique_id"] == character_id:

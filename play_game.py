@@ -12,6 +12,11 @@ def look_around(gpt_control, state):
 
     user_prompt = json.dumps(this_json)
 
+    monsters = state.get_present_monsters()
+    if monsters:
+        for group in monsters:
+            user_prompt += "A group of monsters blocks the path to {}:\n{}\n".format(group["connect_id"], json.dumps(group["monsters"]))
+
     description = gpt_control.run_gpt(prompts["look_around"]["system_prompt"], user_prompt)
     print(description)
 
@@ -62,20 +67,33 @@ def spawn_monsters(gpt_control, state, monster_spawns):
     if location_info["location"]["type"] == "field":
         min_level = "1"
         max_level = "3"
-        monsters = state.get_monsters()["field_monsters"]
+        setting_monsters = state.get_monsters()["field_monsters"]
     elif location_info["type"] == "dungeon":
         min_level = "4"
         max_level = "8"
-        monsters = state.get_monsters()["dungeon_monsters"]
+        setting_monsters = state.get_monsters()["dungeon_monsters"]
 
-    system_prompt = prompts["spawn_monsters"]["system_prompt"].format(min_level, max_level, monsters,
+    system_prompt = prompts["spawn_monsters"]["system_prompt"].format(min_level, max_level, setting_monsters,
                                                                       json.dumps(location_info))
 
+    all_monsters = []
     for monster_spawn in monster_spawns:
         user_prompt = prompts["spawn_monsters"]["user_prompt"].format(monster_spawn)
         monster_output = gpt_control.run_gpt(system_prompt, user_prompt, temperature=0.8, json=True)
 
-        print(monster_output)
+        monster_json = json.loads(monster_output)
+        for monster in monster_json["monsters"]:
+            for reference_monster in setting_monsters:
+                if reference_monster["name"] == monster["type"]:
+                    monster["description"] = reference_monster["description"]
+                    if "resistances" in reference_monster:
+                        monster["resistances"] = reference_monster["resistances"]
+                    if "weaknesses" in reference_monster:
+                        monster["weaknesses"] = reference_monster["weaknesses"]
+        all_monsters.append({"connect_id": monster_spawn, "monsters": monster_json["monsters"]})
+
+    print(all_monsters)
+    state.set_present_monsters(all_monsters)
 
 def load_game():
     good_file = False
