@@ -31,8 +31,8 @@ monsters = gpt_control.run_gpt(prompts["create_monster_setting"]["system_prompt"
 print(monsters)
 monsters_json = json.loads(monsters)
 
-map = gpt_control.run_gpt(prompts["build_map"]["system_prompt"], prompts["build_map"]["user_prompt"].format(setting),
-                                 temperature=0.7, force_long=True, json=True)
+map = gpt_control.run_gpt(prompts["build_map2"]["system_prompt"], prompts["build_map"]["user_prompt"].format(setting),
+                                 temperature=0.8, force_long=True, json=True)
 print(map)
 
 map_json = json.loads(map)
@@ -42,21 +42,70 @@ starting_point = gpt_control.run_gpt(prompts["find_starting_point"]["system_prom
 
 print(starting_point)
 
+map_with_indoor = gpt_control.run_gpt(prompts["add_indoor_areas"]["system_prompt"],
+                                      prompts["add_indoor_areas"]["user_prompt"].format(map, setting),
+                                      temperature=0.8, json=True)
+
+print(map_with_indoor)
+
+fixed_nodes = gpt_control.run_gpt(prompts["connect_indoor_areas"]["system_prompt"],
+                                  prompts["connect_indoor_areas"]["user_prompt"].format(map, map_with_indoor),
+                                  temperature=0.3, json=True)
+
+print(fixed_nodes)
+
+indoor_json = json.loads(map_with_indoor)
+fixed_nodes_json = json.loads(fixed_nodes)
+
+new_map = {"nodes": []}
+
+for original_node in map_json["nodes"]:
+    for new_node in fixed_nodes_json["nodes"]:
+        if new_node["unique_id"] == original_node["unique_id"]:
+            for new_connection in new_node["connections"]:
+                original_node["connections"].append(new_connection)
+            break
+
+    new_map["nodes"].append(original_node)
+
+for node in indoor_json["nodes"]:
+    new_map["nodes"].append(node)
+
+map = json.dumps(new_map, indent=2)
+
+print(map)
+
 dungeon_map = gpt_control.run_gpt(prompts["build_dungeon_map"]["system_prompt"],
                                   prompts["build_dungeon_map"]["user_prompt"].format(json.dumps(monsters_json["dungeon_boss"]), setting),
-                                 temperature=0.7, force_long=True, json=True)
+                                 temperature=0.8, force_long=True, json=True)
 print(dungeon_map)
 
 dungeon_map_json = json.loads(dungeon_map)
 
-npcs = gpt_control.run_gpt(prompts["create_npcs"]["system_prompt"],
-                           prompts["create_npcs"]["user_prompt"].format(map, setting),
-                           temperature=0.7, force_long=True, json=True)
+#npcs = gpt_control.run_gpt(prompts["create_npcs"]["system_prompt"],
+#                           prompts["create_npcs"]["user_prompt"].format(map, setting),
+#                           temperature=0.8, force_long=True, json=True)
+#
+#print(npcs)
+#npc_json = json.loads(npcs)
 
-print(npcs)
-npc_json = json.loads(npcs)
+dungeon_connections = gpt_control.run_gpt(prompts["connect_dungeon"]["system_prompt"],
+                                          prompts["connect_dungeon"]["user_prompt"].format(map, dungeon_map),
+                                          temperature=0.5, json=True)
 
-for node in map_json["nodes"]:
+print(dungeon_connections)
+
+dungeon_connections_json = json.loads(dungeon_connections)
+for node in new_map["nodes"]:
+    if node["unique_id"] == "field_to_dungeon":
+        node["connections"].append(dungeon_connections_json["connections"][0])
+        break
+for node in dungeon_map_json["nodes"]:
+    if node["unique_id"] == "first_dungeon_node":
+        node["connections"].append(dungeon_connections_json["connections"][1])
+        break
+
+for node in new_map["nodes"]:
     user_prompt = prompts["describe_node"]["user_prompt"].format(setting, json.dumps(node))
     description = gpt_control.run_gpt(prompts["describe_node"]["system_prompt"], user_prompt, temperature=0.7)
 
@@ -70,7 +119,7 @@ for node in dungeon_map_json["nodes"]:
     print(description)
     node["detailed_description"] = description
 
-    map_json["nodes"].append(node)
+    new_map["nodes"].append(node)
 
 for npc in npc_json["characters"]:
     user_prompt = prompts["character_details"]["user_prompt"].format(setting, json.dumps(npc))
@@ -97,7 +146,7 @@ for npc in npc_json["characters"]:
     npc["backstory"] = backstory
 
 world = {}
-world["nodes"] = map_json["nodes"]
+world["nodes"] = new_map["nodes"]
 world["starting_point"] = starting_point
 world["characters"] = npc_json["characters"]
 world["setting"] = setting_json
