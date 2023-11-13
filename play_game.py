@@ -56,6 +56,27 @@ def invite(gpt_control, state, target):
     if response["accept"]:
         state.add_companion(target)
 
+def spawn_monsters(gpt_control, state, monster_spawns):
+    location_info = state.get_location_info()
+
+    if location_info["location"]["type"] == "field":
+        min_level = "1"
+        max_level = "3"
+        monsters = state.get_monsters()["field_monsters"]
+    elif location_info["type"] == "dungeon":
+        min_level = "4"
+        max_level = "8"
+        monsters = state.get_monsters()["dungeon_monsters"]
+
+    system_prompt = prompts["spawn_monsters"]["system_prompt"].format(min_level, max_level, monsters,
+                                                                      json.dumps(location_info))
+
+    for monster_spawn in monster_spawns:
+        user_prompt = prompts["spawn_monsters"]["user_prompt"].format(monster_spawn)
+        monster_output = gpt_control.run_gpt(system_prompt, user_prompt, temperature=0.8, json=True)
+
+        print(monster_output)
+
 def load_game():
     good_file = False
     while not good_file:
@@ -114,7 +135,9 @@ def interpret(gpt_control, state, command):
         look_at(gpt_control, state, command)
         return False
     elif output_json["command"] == "move" and output_json["success"]:
-        state.update_current_location(output_json["target"])
+        monsters = state.update_current_location(output_json["target"])
+        if monsters:
+            spawn_monsters(gpt_control, state, monsters)
         return True
     elif output_json["command"] == "talk" and output_json["success"]:
         talk_to(gpt_control, state, output_json["target"])

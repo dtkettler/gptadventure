@@ -14,6 +14,23 @@ Output a JSON object with the following fields:
 2. history - a few paragraphs of history of the city""",
     "user_prompt": """Create a setting for a city named {} and surrounding area in a Tolkein-esque fantasy world"""
   },
+  "create_monster_setting": {
+    "system_prompt": """You are creating the setting for a game world.
+Based on the setting data, output a JSON object with the following fields:
+1. field_monsters - a list of 3 to 5 low-level types monsters that might appear in outdoor areas
+2. dungeon_monsters - a list of 3 to 5 mid-level types monster that might appear in dungeon areas
+3. dungeon_boss - a single high-level monster that serves as the boss of the local dungeon
+
+Each monster type should then contain the following fields:
+1. name - Required, 1 or 2 words that names the kind of monster.
+2. description - Required, a short description of the monster.
+3. resistances - Optional, a list of types of damage the monster is resistant to. Could be elements, poison, physical attacks, etc.
+4. weaknesses - Optional, similar to resistances but a list of types of damage the monster is weak to.
+5. equipment - Optional, typically only humanoid monsters will have this.  Could be basic weapons likes clubs, etc.
+""",
+    "user_prompt": """Create some monsters to populate the Tolkein-esque fantasy world with the following setting:
+{}"""
+  },
   "build_map": {
     "system_prompt": """"Role": "You are building a map for a text adventure game world",
 "Task": "Output a JSON object that describes the game's map",
@@ -44,8 +61,9 @@ Between indoor areas there should be a door or passageway, but these are rare.",
 "'field' nodes can only connect to each other or to a 'town' node if it's a city gate",
 "'indoor' nodes can connect to 'town' nodes or to each other but the latter is less common",
 "'town' nodes can connect to each other, to 'indoor' nodes, or to 'field' nodes from a city gate node",
+"Typically there is only one connection in a given cardinal direction, but connections from 'town' to 'indoor' nodes can ignore that restriction",
 "There must be exactly one special 'field' node with unique_id 'dungeon_entrance'",
-"The 'dungeon_entrance' node has a special connection to a node with unique_id 'dungeon_start' which is not part of this map"
+"The 'dungeon_entrance' node has an additional special connection with connect_id 'dungeon_start' which references a node that is not part of this map"
 ]""",
 #    "system_prompt": """You are building a map for a game world.
 #Start by laying out town and field nodes first, then add indoor nodes that connect to town nodes, and finally one
@@ -104,10 +122,13 @@ Between dungeon areas there can be passageways, doors, stairs, etc.",
 "Rules": ["Node type for the dungeon map is always 'dungeon'",
 "There should be 5 to 8 dungeon nodes",
 "There must be exactly one starting dungeon node with unique_id 'dungeon_start'",
-"The starting dungeon node has a special connection to a node with unique_id 'dungeon_entrance' that is not part of this map",
-"There must also be one dungeon boss node",
+"The starting dungeon node has an additional special connection with connect_id 'dungeon_entrance' which references a node that is not part of this map",
+"There must also be exactly one dungeon boss node with unique_id 'dungeon_boss'",
 ]""",
     "user_prompt": """Create a map of a small underground dungeon in a Tolkein-esque fantasy world.
+Create a dungeon suitable for the dungeon boss:
+{}
+
 Use the following setting information:
 {}
 """
@@ -131,12 +152,13 @@ Output a JSON object with a list of characters, each entry containing the follow
 3. race - the character's race (i.e., human, elf, dwarf, etc.)
 4. gender - the character's gender
 5. profession - the character's profession
-6. physical_description - a one or two sentence description of what the character looks like
-7. personality - a one or two sentence description of this character's personality
-8. location_id - the unique_id of the node where the character is currently located
-9. relationships - optional, a list describing this character's relationships with other characters.  Has the following fields:
+6. level - an integer between 1 and 10 that represents the character's level, though higher levels should be less common
+7. physical_description - a one or two sentence description of what the character looks like
+8. personality - a one or two sentence description of this character's personality
+9. location_id - the unique_id of the node where the character is currently located
+10. relationships - optional, a list describing this character's relationships with other characters.  Has the following fields:
   1. relation_id - a reference to the unique_id of the character they have a relationship with
-  2. relationship - the nature of their relationship, i.e. 'lover', 'father', 'mother', 'son', 'daughter', etc.
+  2. relationship - the nature of their relationship, i.e. 'lover', 'father', 'mother', 'son', 'daughter', etc.  Make sure the reciprocal relationship also exists.
 
 Use the JSON map data for more context and to get location_ids""",
     "user_prompt": """Create about a dozen characters to populate the following map in a Tolkein-esque fantasy world:
@@ -157,8 +179,7 @@ Given the setting:
 "hobby": "Come up with one hobby for this character that has nothing to do with their profession, i.e. fishing, gardening, playing a musical instrument, etc.",
 "likes": "List a few things this character likes",
 "dislikes": "List a few things this character dislikes",
-"relationship_status": "Married, dating someone, single, not interested, etc.",
-"backstory": "Based on the data write a couple paragraphs of backstory for this character"
+"relationship_status": "Married, dating someone, single, not interested, etc."
 }}""",
     "user_prompt": """setting_info = {}
 
@@ -166,7 +187,9 @@ character_info = {}"""
   },
   "character_backstory": {
     "system_prompt": """You are describing the backstory of characters in a game world.
-Based on the data in the content write a backstory for this character""",
+Based on the data in the content write a backstory for this character
+Make sure their experiences are appropriate for their level.
+A level 1 character would still be inexperienced, level 5 would be fairly experienced, and level 10 would be an expert in their field.""",
     "user_prompt": """setting_info = {}
     
 character_info = {}"""
@@ -193,6 +216,20 @@ Based on the character and setting information, output a JSON object with the fo
     "user_prompt": """character = {}
 
 setting_info = {}"""
+  },
+  "spawn_monsters": {
+    "system_prompt": """You are a game master for a text-based adventure game
+Given the monsters that can appear in this setting and the location info output a JSON object describing a group of 1 to 3 monsters.
+The JSON object should be a list with each element having the following fields:
+1. unique_id - Unique ID for this monster
+2. type - Name of the monster
+3. level - Level of the monster between {} and {}
+4. descriptor - One word to distinguish this particular monster from others of the same type.  Could be size, color, attitude (i.e., 'aggressive'), etc.
+
+monsters_in_setting = {},
+location = {}
+""",
+    "user_prompt": """Describe an appropriate group of monsters that appear and block the path to connect_id {}"""
   },
   "look_around": {
     "system_prompt": """You are a narrator for a text-based adventure game.

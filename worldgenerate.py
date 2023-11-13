@@ -24,6 +24,13 @@ setting_json = json.loads(setting)
 setting_json["city_name"] = city_name
 setting = json.dumps(setting_json, indent=2)
 
+monsters = gpt_control.run_gpt(prompts["create_monster_setting"]["system_prompt"],
+                               prompts["create_monster_setting"]["user_prompt"].format(setting), temperature=0.8,
+                               json=True)
+
+print(monsters)
+monsters_json = json.loads(monsters)
+
 map = gpt_control.run_gpt(prompts["build_map"]["system_prompt"], prompts["build_map"]["user_prompt"].format(setting),
                                  temperature=0.7, force_long=True, json=True)
 print(map)
@@ -35,7 +42,8 @@ starting_point = gpt_control.run_gpt(prompts["find_starting_point"]["system_prom
 
 print(starting_point)
 
-dungeon_map = gpt_control.run_gpt(prompts["build_dungeon_map"]["system_prompt"], prompts["build_dungeon_map"]["user_prompt"].format(setting),
+dungeon_map = gpt_control.run_gpt(prompts["build_dungeon_map"]["system_prompt"],
+                                  prompts["build_dungeon_map"]["user_prompt"].format(json.dumps(monsters_json["dungeon_boss"]), setting),
                                  temperature=0.7, force_long=True, json=True)
 print(dungeon_map)
 
@@ -66,10 +74,6 @@ for node in dungeon_map_json["nodes"]:
 
 for npc in npc_json["characters"]:
     user_prompt = prompts["character_details"]["user_prompt"].format(setting, json.dumps(npc))
-    #backstory = gpt_control.run_gpt(prompts["character_backstory"]["system_prompt"], user_prompt, temperature=0.6)
-
-    #print(backstory)
-    #npc["backstory"] = backstory
     character_details = gpt_control.run_gpt(prompts["character_details"]["system_prompt"], user_prompt, temperature=0.8,
                                             force_long=True, json=True)
 
@@ -86,13 +90,18 @@ for npc in npc_json["characters"]:
     npc["likes"] = character_details_json["likes"]
     npc["dislikes"] = character_details_json["dislikes"]
     npc["relationship_status"] = character_details_json["relationship_status"]
-    npc["backstory"] = character_details_json["backstory"]
+
+    backstory = gpt_control.run_gpt(prompts["character_backstory"]["system_prompt"], user_prompt, temperature=0.8)
+
+    print(backstory)
+    npc["backstory"] = backstory
 
 world = {}
 world["nodes"] = map_json["nodes"]
 world["starting_point"] = starting_point
 world["characters"] = npc_json["characters"]
-world["setting"] = setting
+world["setting"] = setting_json
+world["monsters"] = monsters_json
 
 with open(city_name + ".json", "w") as f:
     f.write(json.dumps(world, indent=2))

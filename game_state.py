@@ -1,3 +1,6 @@
+import random
+
+
 class State():
     def __init__(self, world):
         self.world = world
@@ -9,6 +12,7 @@ class State():
         self.conversations = {}
         self.player = None
         self.companions = []
+        self.present_monsters = []
 
     def get_location_info(self):
         characters = []
@@ -30,6 +34,9 @@ class State():
 
         this_json = {"location": self.current_node, "characters_present": characters}
         return this_json
+
+    def get_monsters(self):
+        return self.world["monsters"]
 
     def get_setting(self):
         return self.world["setting"]
@@ -121,3 +128,18 @@ class State():
                 break
         for companion in self.companions:
             companion["location_id"] = new_node["unique_id"]
+
+        monsters = None
+        if new_node["type"] == "field" or new_node["type"] == "dungeon":
+            monsters = self.check_for_monsters(new_node)
+
+        return monsters
+
+    def check_for_monsters(self, node):
+        monsters = []
+        for connection in node["connections"]:
+            ran = random.random()
+            if ran < 0.5:
+                monsters.append(connection["connect_id"])
+
+        return monsters
