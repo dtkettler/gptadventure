@@ -103,11 +103,11 @@ dungeon_connections_json = json.loads(dungeon_connections)
 
 for node in field_map_json["nodes"]:
     if node["unique_id"] == "field_to_dungeon":
-        node["connections"].append(town_field_connection_json["connections"][0])
+        node["connections"].append(dungeon_connections_json["connections"][0])
         break
 for node in dungeon_map_json["nodes"]:
     if node["unique_id"] == "first_dungeon_node":
-        node["connections"].append(town_field_connection_json["connections"][1])
+        node["connections"].append(dungeon_connections_json["connections"][1])
         break
 
 npcs = gpt_control.run_gpt(prompts["create_npcs"]["system_prompt"],
