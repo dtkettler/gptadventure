@@ -43,27 +43,22 @@ Each monster type should then contain the following fields:
 "connection format": "{{"connect_id": "A reference to the unique_id of the connecting node",
 "connect_name": "A reference to the name of the connecting node",
 "how": "A description of how this node connects to the other node.
-For field or town areas this can be roads and paths.
-For going from town to indoor areas there should be a door or entrance.
-Between indoor areas there should be a door or passageway, but these are rare.",
+For field or town areas this can be roads and paths.",
 "direction": "the general direction of the connection"}}",
 "Rules": ["Node type must be one of the following:
   1. 'town' - outdoor areas that are within town
-  2. 'indoor' - interiors of buildings
-  3. 'field' - outdoor areas that are outside of town",
-"There should be 3 to 5 'town' nodes",
-"There should be 3 to 5 'field' nodes",
-"There should be 3 to 5 'indoor' nodes",
+  2. 'field' - outdoor areas that are outside of town",
+"There should be 4 to 6 'town' nodes",
+"There should be 4 to 6 'field' nodes",
+"Every node must have at least one connection",
+"It must be possible to go from any node in this map to any other by following connections",
 "'town' nodes can include things like outdoor markets, town squares, major streets, landmarks, etc.",
-"'indoor' nodes can include things like taverns, blacksmiths, inns, guilds, storage rooms, etc.",
 "'field' nodes can include things like lakes, rivers, forests, mountains, etc.",
 "There must be at least one city gate node which is considered a 'town' node",
 "'field' nodes can only connect to each other or to a 'town' node if it's a city gate",
-"'indoor' nodes can connect to 'town' nodes or to each other but the latter is less common",
-"'town' nodes can connect to each other, to 'indoor' nodes, or to 'field' nodes from a city gate node",
-"Typically there is only one connection in a given cardinal direction, but connections from 'town' to 'indoor' nodes can ignore that restriction",
-"There must be exactly one special 'field' node with unique_id 'dungeon_entrance'",
-"The 'dungeon_entrance' node has an additional special connection with connect_id 'dungeon_start' which references a node that is not part of this map"
+"'town' nodes can connect to each other or to 'field' nodes from a city gate node",
+"There must be exactly one 'field' node with unique_id 'field_to_dungeon' that marks the entrance to a dungeon (the dungeon is not part of this map)",
+"The dungeon entrance node must be at least two nodes distant from a 'town' node"
 ]""",
 #    "system_prompt": """You are building a map for a game world.
 #Start by laying out town and field nodes first, then add indoor nodes that connect to town nodes, and finally one
@@ -99,11 +94,94 @@ Between indoor areas there should be a door or passageway, but these are rare.",
 #    'indoor' to 'indoor' - use a door or passageway, but these should be limited
 #    'field' to 'dungeon' or 'dungeon' to 'field' - can only take place at a dungeon entrance
 #    'dungeon' to 'dungeon' - can be quite varied, including directions, doors, and passageways""",
-
     "user_prompt": """Create a map of an original small city and surrounding area in a Tolkein-esque fantasy world.
 Use the following setting information:
 {}
 """
+  },
+  "build_map2": {
+    "system_prompt": """"Role": "You are building a map for a text adventure game world",
+"Task": "Output a JSON object that describes the game's map",
+"Output format": "A list called 'nodes' with elements that follow the node format",
+"node format": "{{"unique_id": "string, a unique ID for each map node",
+"name": "string, the name of this node",
+"type": "string, the type of this node (see rules)",
+"description": "string, a brief one or two sentence description of the node",
+"connections": "a list of connections (see connection format)"}}",
+"connection format": "{{"connect_id": "A reference to the unique_id of the connecting node",
+"connect_name": "A reference to the name of the connecting node",
+"how": "A description of how this node connects to the other node.
+For field or town areas this can be roads, paths, etc.",
+"direction": "the general direction of the connection"}}",
+"Rules": ["Node type must be one of the following:
+  1. 'town' - outdoor areas that are within town
+  2. 'field' - outdoor areas that are outside of town",
+"Start with a five by five grid of nodes",
+"To begin with assume all nodes are connected in the cardinal directions",
+"Within that grid select five or six contiguous nodes to be town nodes while the rest are field nodes",
+"Designate one or more town nodes that border field nodes to be city gates and remove any connections between field and town nodes that aren't gates",
+"Randomly remove some other connections between field nodes to represent obstacles",
+"It must be possible to go from any node in this map to any other by following connections. Remove any field nodes that can't be reached from town.",
+"Start describing the remaining nodes",
+"'town' nodes can include things like outdoor markets, town squares, major streets, landmarks, etc.",
+"'field' nodes can include things like lakes, rivers, forests, mountains, etc.",
+"'field' nodes can only connect to each other or to a 'town' node if it's a city gate",
+"There must be exactly one 'field' node with unique_id 'field_to_dungeon' that marks the entrance to a dungeon (the dungeon is not part of this map)",
+"The dungeon entrance node should be the 'field' node that takes the greatest number of connections to reach from a 'town' node"
+]"""
+  },
+  "add_indoor_areas": {
+    "system_prompt": """"Role": "You are building a map for a text adventure game world",
+"Task": "Given the existing map, output a JSON object that adds additional indoor areas",
+"Output format": "A list called 'nodes' with elements that follow the node format",
+"node format": "{{"unique_id": "string, a unique ID for each map node",
+"name": "string, the name of this node",
+"type": "string, the type of this node (see rules)",
+"description": "string, a brief one or two sentence description of the node",
+"connections": "a list of connections (see connection format)"}}",
+"connection format": "{{"connect_id": "A reference to the unique_id of the connecting node",
+"connect_name": "A reference to the name of the connecting node",
+"how": "A description of how this node connects to the other node.
+For going from indoor to town areas there should be some sort of exit.
+Between indoor areas there should be a door or passageway.",
+"direction": "the general direction of the connection"}}"
+"Rules": ["New nodes that are added must be of the type:
+'indoor' - interiors of buildings",
+"There should be 4 to 6 'indoor' nodes added",
+"'indoor' nodes can include things like taverns, blacksmiths, inns, guilds, storage rooms, etc.",
+"'indoor' nodes can only connect to 'town' nodes or to each other but the latter is less common",
+"'indoor' nodes should never connect to 'field' nodes",
+"It is fine if an indoor node connects to a town node in a direction where there's already another town node"
+]""",
+    "user_prompt": """Given the existing map of a Tolkein-esque fantasy world, add new nodes to represent indoor areas.
+Existing map:
+{}
+    
+Use the following setting information:
+{}"""
+  },
+  "connect_indoor_areas": {
+    "system_prompt": """"Role": "You are building a map for a text adventure game world",
+"Task": "Given the existing map and indoor nodes, output a JSON object that fixes connections",
+"Output format": "A list called 'nodes' with elements that follow the node format",
+"node format": "{{"unique_id": "string, a unique ID for each map node",
+"connections": "a list of connections (see connection format)"}}",
+"connection format": "{{"connect_id": "A reference to the unique_id of the connecting node",
+"connect_name": "A reference to the name of the connecting node",
+"how": "A description of how this node connects to the other node.
+When going from 'town' to 'indoor' areas there should be some sort of door or entrance",
+"direction": "the general direction of the connection"}}"
+"Rules": ["Don't create any new nodes",
+"Go through each of the indoor nodes one-by-one",
+"If there is a connection from the indoor node to a town node add a corresponding connection from that town node to the indoor node",
+"Only output modified node unique_ids and connections"
+]""",
+    "user_prompt": """Given the existing map and the list of indoor nodes, fix the connections so they are reciprocated.
+Existing map:
+{}
+
+Indoor nodes:
+{}"""
   },
   "build_dungeon_map": {
     "system_prompt": """"Role": "You are building a map for a text adventure game world",
@@ -121,8 +199,8 @@ Between dungeon areas there can be passageways, doors, stairs, etc.",
 "direction": "the general direction of the connection"}}",
 "Rules": ["Node type for the dungeon map is always 'dungeon'",
 "There should be 5 to 8 dungeon nodes",
-"There must be exactly one starting dungeon node with unique_id 'dungeon_start'",
-"The starting dungeon node has an additional special connection with connect_id 'dungeon_entrance' which references a node that is not part of this map",
+"It must be possible to go from any node in this map to any other by following connections",
+"There must be exactly one starting dungeon node with unique_id 'first_dungeon_node'",
 "There must also be exactly one dungeon boss node with unique_id 'dungeon_boss'",
 ]""",
     "user_prompt": """Create a map of a small underground dungeon in a Tolkein-esque fantasy world.
@@ -132,6 +210,22 @@ Create a dungeon suitable for the dungeon boss:
 Use the following setting information:
 {}
 """
+  },
+  "connect_dungeon": {
+    "system_prompt": """"Role": "You are building a map for a text adventure game world",
+"Task": "Given the two existing maps, output a JSON object with creates connections between:
+1. the node with unique_id 'field_to_dungeon'
+2. the node with unique_id 'first_dungeon_node'",
+"Output format": "Output a list called 'connections' that follows the format of connections in the existing maps",
+"Rules": ["There should be just two connections in the list",
+"The connection from 'field_to_dungeon' to 'first_dungeon_node' is first",
+"The connection from 'first_dungeon_node' to 'field_to_dungeon' is second"
+]""",
+    "user_prompt": """first map:
+{}
+
+second map:
+{}"""
   },
   "find_starting_point": {
     "system_prompt": """Based on the map information in the content, give the unique_id of the node that makes the best starting point for new adventurers.
