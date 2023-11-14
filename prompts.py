@@ -202,16 +202,17 @@ For field or town areas this can be roads, paths, etc.",
 "connections": "a list of connections (see connection format)"}}",
 "connection format": "{{"connect_id": "A reference to the unique_id of the connecting node",
 "connect_name": "A reference to the name of the connecting node",
-"how": "A description of how this node connects to the other node.
-For going from indoor to town areas there should be some sort of exit to the street.
+"how": "A description of how to get from this node to the connecting node.
+When going from indoor to town areas there should be some sort of exit to the street.
 Between indoor areas there should be a door or passageway.",
 "direction": "The general direction of the connection. Between indoor nodes this can also include stairs up and down"}}"
 "Rules": ["New nodes that are added must be of the type:
 'indoor' - interiors of buildings",
 "There should be 4 to 6 indoor nodes added",
 "Indoor nodes can include things like taverns, blacksmiths, inns, guilds, storage rooms, etc.",
-"Indoor nodes can only connect to 'town' nodes or to each other but the latter is less common",
-"For indoor nodes there does not have to be only one connection in a given direction"
+"Indoor nodes can only connect to town nodes or to each other but the latter is less common",
+"If there is a connection between two indoor nodes it must exist in both directions",
+"There does not have to be only one connection in a given direction"
 ]""",
     "user_prompt": """Given the existing map of a Tolkein-esque fantasy world, add new nodes to represent indoor areas.
 Existing map:
@@ -223,11 +224,17 @@ Use the following setting information:
   "connect_indoor_areas": {
     "system_prompt": """"Role": "You are building a map for a text adventure game world",
 "Task": "Given the existing map and the indoor node, output a JSON object that adds a reciprocal connection",
-"Output format": "A list called 'connections' with all the same properties as 'connections' in the existing map
-but also add a 'reference_id' property which is the unique_id of the node it is connecting from",
+"Output format": "A list called 'connections' with elements that follow the connection format",
+"connection format": "{{"connect_id": "A reference to the unique_id of indoor node being connected to",
+"connect_name": "A reference to the name of the indoor node being connected to",
+"how": "Create a description of how to get from the town node to the indoor node being connected to.
+Should describe doors, entranceways, etc.",
+"direction": "The general direction of the connection."
+"reference_id": "The unique_id of the town node of the existing map that the connection is coming from",
+}}"
 "Rules": ["If there is a connection from the indoor node to a town node then add a corresponding connection from that town node to the indoor node",
-"The 'how' of connections from town nodes to indoor nodes should describe doors, entranceways, etc.",
 "There does not have to be only one connection in a given direction",
+"The 'how' for this connection should be an original description",
 "Only output the new connections",
 "If there is no connection from the indoor node to a town node then just return an empty list"
 ]""",
@@ -268,13 +275,14 @@ Use the following setting information:
   },
   "connect_map": {
     "system_prompt": """"Role": "You are building a map for a text adventure game world",
-"Task": "Given the two existing maps, output a JSON object with creates connections between:
+"Task": "Given the two existing maps, output a JSON object that creates connections between:
 1. the node with unique_id '{0}'
 2. the node with unique_id '{1}'",
 "Output format": "Output a list called 'connections' that follows the format of connections in the existing maps",
-"Rules": ["There should be just two connections in the list",
+"Rules": ["There should be exactly two connections in the list",
 "The connection from '{0}' to '{1}' is first",
 "The connection from '{1}' to '{0}' is second"
+"'connect_id' refers to the node that is being connected to"
 ]""",
     "user_prompt": """first map:
 {}
