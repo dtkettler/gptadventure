@@ -5,6 +5,7 @@ import pickle
 import gpt
 from prompts import prompts
 from game_state import State
+from combat import go_through_attacks
 
 
 def look_around(gpt_control, state):
@@ -14,6 +15,7 @@ def look_around(gpt_control, state):
 
     monsters = state.get_present_monsters()
     if monsters:
+        user_prompt += "\n"
         for group in monsters:
             user_prompt += "A group of monsters blocks the path to {}:\n{}\n".format(group["connect_id"], json.dumps(group["monsters"]))
 
@@ -24,6 +26,12 @@ def look_at(gpt_control, state, command):
     this_json = state.get_location_info()
 
     system_prompt = prompts["look_at"]["system_prompt"].format(json.dumps(this_json))
+
+    monsters = state.get_present_monsters()
+    if monsters:
+        system_prompt += "\n"
+        for group in monsters:
+            system_prompt += "A group of monsters blocks the path to {}:\n{}\n".format(group["connect_id"], json.dumps(group["monsters"]))
 
     description = gpt_control.run_gpt(system_prompt, command)
     print(description)
@@ -95,6 +103,18 @@ def spawn_monsters(gpt_control, state, monster_spawns):
     print(all_monsters)
     state.set_present_monsters(all_monsters)
 
+def do_battle(gpt_control, state, target):
+    for monster_group in state.get_present_monsters():
+        if monster_group["connect_id"] == target:
+            monster_levels = []
+            for monster in monster_group["monsters"]:
+                monster["rounds_attacked"] = 0
+                monster_levels.append(monster["level"])
+            fled = go_through_attacks(gpt_control, state.get_player_status(), [], monster_group["monsters"])
+            if not fled:
+                state.check_for_level_up(monster_levels)
+            break
+
 def load_game():
     good_file = False
     while not good_file:
@@ -123,6 +143,7 @@ def display_status(state):
 
     print("Name: {}".format(player["name"]))
     print("Class: {}".format(player["class"]))
+    print("Level: {}".format(player["level"]))
     print("Fatigue: {}".format(player["fatigue"]))
     print("Injuries: {}".format(player["injuries"]))
     print("Equipment: {}".format(", ".join(player["equipment"])))
@@ -153,6 +174,12 @@ def interpret(gpt_control, state, command):
         look_at(gpt_control, state, command)
         return False
     elif output_json["command"] == "move" and output_json["success"]:
+        # Really this should be handled by the prompt but I'm finding it unreliable
+        for monster_group in state.get_present_monsters():
+            if monster_group["connect_id"] == output_json["target"]:
+                print("The path is blocked by monsters")
+                return False
+
         monsters = state.update_current_location(output_json["target"])
         if monsters:
             spawn_monsters(gpt_control, state, monsters)
@@ -163,6 +190,9 @@ def interpret(gpt_control, state, command):
     elif output_json["command"] == "invite" and output_json["success"]:
         invite(gpt_control, state, output_json["target"])
         return False
+    elif output_json["command"] == "fight" and output_json["success"]:
+        do_battle(gpt_control, state, output_json["target"])
+        return True
     elif not output_json["success"]:
         return False
     elif output_json["command"] == "unknown":

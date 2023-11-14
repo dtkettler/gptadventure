@@ -118,6 +118,7 @@ For town areas this can be roads and paths.",
 'town' - outdoor areas that are within town",
 "There should be 4 to 6 town nodes",
 "Every node must have at least one connection",
+"If there is a connection from node A to node B then there must also be a corresponding connection from node B to node A",
 "It must be possible to go from any node in this map to any other by following connections",
 "Town nodes can include things like outdoor markets, town squares, major streets, landmarks, etc.",
 "There must be exactly one city gate node at an edge of the map with unique_id 'city_gate'",
@@ -147,6 +148,7 @@ For field areas this can be roads and paths.",
 field' - outdoor areas that are outside of town",
 "There should be 5 to 8 'field' nodes",
 "Every node must have at least one connection",
+"If there is a connection from node A to node B then there must also be a corresponding connection from node B to node A",
 "It must be possible to go from any node in this map to any other by following connections",
 "Field' nodes can include things like lakes, rivers, forests, mountains, etc.",
 "There must be exactly one node with unique_id 'city_outskirts' that marks the outskirts of the city (the city is not part of this map)",
@@ -397,19 +399,66 @@ location_data = {}"""
 "description": "Required, one second-person sentence describing the action that is being taken, not the outcome."
 }},
 "Rules": ["Interpret the command given in the content and return a JSON object.",
-"The target for the command must be present at or connected to the current location. If it's not the command fails.",
-"If the target for the command is a location or character, the value for the target parameter must be just its unique_id",
-"If the target for the command is not a location or character then its value can be a one or two word description",
 "The command must be one of the following:
   1. 'look_around' - just look around in general
   2. 'look_at' - look at a specific object, character, place, etc.
   3. 'move' - move to a new location
   4. 'talk' - begin dialogue with a character
-  5. 'invite' - you are inviting a character to join your party
+  5. 'invite' - invite a character to join your party
   6. 'exit_game' - exit or quit the game
   7. 'save_game' - save the game state
   8. 'status' - look at user's status
-  9. 'unknown' - command not understood, anything that isn't one of the above"
+  9. 'fight' - fight or attack a group of monsters that is on a connection
+  10. 'unknown' - command not understood, anything that isn't one of the above"
+],
+"Command-specific rules": [
+{{"look_around": [
+  "target not needed",
+  "always succeeds"
+]}},
+{{"look_at": [
+  "target is required",
+  "the value of target is the corresponding unique_id if it's a character",
+  "otherwise target can be a one or two word description for anything in the location information",
+  "command fails if the target isn't present"
+]}},
+{{"move": [
+  "target is required",
+  "the value of target must be the connect_id of the location to move to",
+  "command fails if there is no corresponding connection",
+  "if there are monsters at connect_id that matches the target then the command fails because the path is blocked"
+]}},
+{{"talk": [
+  "target is required",
+  "the value of target must be the unique_id of the character to talk to",
+  "command fails if the person isn't present"
+]}},
+{{"invite": [
+  "target is required",
+  "the value of target must be the unique_id of the character to invite to your party",
+  "command fails if the person isn't present"
+]}},
+{{"exit_game": [
+  "target not needed",
+  "always succeeds"
+]}},
+{{"save_game": [
+  "target not needed",
+  "always succeeds"
+]}},
+{{"status": [
+  "target not needed",
+  "always succeeds"
+]}},
+{{"fight": [
+  "target is required"
+  "the value of target must be the connect_id of the connection that has the group of monsters the user wants to fight",
+  "the command fails if there isn't a monster group there"
+]}},
+{{"unknown": [
+  "target not needed",
+  "always fails"
+]}}
 ],
 
 "data": {},

@@ -259,3 +259,5 @@ def go_through_attacks(gpt_control, player, companions, enemies):
         print("Victory, all enemies defeated!")
     else:
         print("You have fled the battle")
+
+    return fled

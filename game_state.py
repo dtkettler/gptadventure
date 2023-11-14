@@ -32,7 +32,11 @@ class State():
                                    "build": character["build"]
                                    })
 
-        this_json = {"location": self.current_node, "characters_present": characters}
+        if self.present_monsters:
+            this_json = {"location": self.current_node, "characters_present": characters, "monster_groups": self.present_monsters}
+        else:
+            this_json = {"location": self.current_node, "characters_present": characters}
+
         return this_json
 
     def get_monsters(self):
@@ -90,6 +94,8 @@ class State():
             self.player["injuries"] = "none"
         if "inventory" not in self.player:
             self.player["inventory"] = []
+        if "rounds_since_fatigue_change" not in self.player:
+            self.player["rounds_since_fatigue_change"] = 0
 
         return self.player
 
@@ -144,8 +150,22 @@ class State():
     def check_for_monsters(self, node):
         monsters = []
         for connection in node["connections"]:
-            ran = random.random()
-            if ran < 0.5:
-                monsters.append(connection["connect_id"])
+            if connection["connect_id"] != "city_gate":
+                ran = random.random()
+                if ran < 0.5:
+                    monsters.append(connection["connect_id"])
 
         return monsters
+
+    def check_for_level_up(self, monster_levels):
+        if "kills_since_level_up" not in self.player:
+            self.player["kills_since_level_up"] = 0
+        for monster_level in monster_levels:
+            level_odds = (10.0 * (monster_level - self.player["level"] + 1) + 5.0 * self.player["kills_since_level_up"]) / 100.0
+            ran = random.random()
+            if ran < level_odds:
+                print("You leveled up!")
+                self.player["level"] = self.player["level"] + 1
+                self.player["kills_since_level_up"] = 0
+            else:
+                self.player["kills_since_level_up"] = self.player["kills_since_level_up"] + 1
