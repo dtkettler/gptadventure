@@ -167,13 +167,13 @@ def update_combat_stats(response_json, player, companions, enemies):
     return companions, enemies, battle_finished
 
 def print_status(player, companions, enemies):
-    print("{}, Fatigue: {}, Injuries: {}".format(player["name"], player["fatigue"], player["injuries"]))
+    print("{} (Level {}), Fatigue: {}, Injuries: {}".format(player["name"], player["level"], player["fatigue"], player["injuries"]))
     for companion in companions:
-        print("{}, Fatigue: {}, Injuries: {}".format(companion["name"], companion["fatigue"], companion["injuries"]))
+        print("{} (Level {}), Fatigue: {}, Injuries: {}".format(companion["name"], companion["level"], companion["fatigue"], companion["injuries"]))
 
     enemy_list = []
     for enemy in enemies:
-        enemy_list.append(enemy["type"])
+        enemy_list.append("{} {} (Level {})".format(enemy["descriptor"], enemy["type"], enemy["level"]))
 
     print("Fighting: {}".format(", ".join(enemy_list)))
 

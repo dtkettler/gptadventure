@@ -103,6 +103,18 @@ def spawn_monsters(gpt_control, state, monster_spawns):
     print(all_monsters)
     state.set_present_monsters(all_monsters)
 
+def spawn_boss_monster(state):
+    other_monsters = state.get_present_monsters()
+    boss_stats = state.get_boss_info()
+
+    boss_stats["unique_id"] = "dungeon_boss"
+    boss_stats["type"] = boss_stats["name"]
+    boss_stats["level"] = 12
+    boss_stats["descriptor"] = "Boss"
+
+    other_monsters.append({"connect_id": "center_of_room", "monsters": [boss_stats]})
+    state.set_present_monsters(other_monsters)
+
 def do_battle(gpt_control, state, target):
     for monster_group in state.get_present_monsters():
         if monster_group["connect_id"] == target:
@@ -112,7 +124,14 @@ def do_battle(gpt_control, state, target):
                 monster_levels.append(monster["level"])
             fled = go_through_attacks(gpt_control, state.get_player_status(), [], monster_group["monsters"])
             if not fled:
-                state.check_for_level_up(monster_levels)
+                leveled = state.check_for_level_up(monster_levels)
+                if leveled:
+                    status = state.get_player_status()["level"]
+                    new_skill = gpt_control.run_gpt(prompts["level_up_skill"]["system_prompt"].format(json.dumps(status)),
+                                                    prompts["level_up_skill"]["user_prompt"].format(status["level"]),
+                                                    temperature=0.8)
+                    print("You learned {}!".format(new_skill))
+                    state.add_skill(new_skill)
                 state.clear_monsters(target)
             break
 

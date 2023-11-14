@@ -45,6 +45,9 @@ class State():
     def get_setting(self):
         return self.world["setting"]
 
+    def get_boss_info(self):
+        return self.world["monsters"]["dungeon_boss"]
+
     def get_character_attitude(self, target):
         for character in self.world["characters"]:
             if character["unique_id"] == target or character["name"] == target:
@@ -132,6 +135,8 @@ class State():
                 break
 
     def update_current_location(self, connect_id):
+        old_node_id = self.current_node["unique_id"]
+
         new_node = None
         for node in self.world["nodes"]:
             if node["unique_id"] == connect_id:
@@ -157,14 +162,14 @@ class State():
 
         monsters = None
         if new_node["type"] == "field" or new_node["type"] == "dungeon":
-            monsters = self.check_for_monsters(new_node)
+            monsters = self.check_for_monsters(new_node, old_node_id)
 
         return monsters
 
-    def check_for_monsters(self, node):
+    def check_for_monsters(self, node, old_node_id):
         monsters = []
         for connection in node["connections"]:
-            if connection["connect_id"] != "city_gate":
+            if connection["connect_id"] != "city_gate" and connection["connect_id"] != old_node_id:
                 ran = random.random()
                 if ran < 0.5:
                     monsters.append(connection["connect_id"])
@@ -181,8 +186,10 @@ class State():
                 print("You leveled up!")
                 self.player["level"] = self.player["level"] + 1
                 self.player["kills_since_level_up"] = 0
+                return True
             else:
                 self.player["kills_since_level_up"] = self.player["kills_since_level_up"] + 1
+                return False
 
     def clear_monsters(self, target_id):
         new_monsters = []
@@ -197,3 +204,10 @@ class State():
         self.player["injuries"] = "none"
         self.player["rounds_since_fatigue_change"] = 0
 
+        for companion in self.companions:
+            companion["fatigue"] = "none"
+            companion["injuries"] = "none"
+            companion["rounds_since_fatigue_change"] = 0
+
+    def add_skill(self, skill):
+        self.player["skills"].append(skill)

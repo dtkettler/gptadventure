@@ -653,7 +653,8 @@ character = {}
 }},
 "Rules": ["The user attacks as specified in the content, or they can attempt to flee",
 "If the user attempts to use a skill they don't possess or doesn't specify an action they take no action that round",
-"Base probabilities for various outcomes are given below",
+"Base probabilities (as percents) for various outcomes are given below",
+"The user can target multiple enemies and therefore produce multiple attacks but the probability of success is multiplied by 0.7 for each",
 "The user may use skills they possess. These skills multiply the chance of defeating an enemy by 1.5 but double the chance of fatigue.",
 "Attacking the opponent with something they are resistant to multiplies the chance of defeating them by 0.5.",
 "Attacking the opponent with something they are weak to doubles the chance of defeating them.",
@@ -678,11 +679,10 @@ character = {}
 "attack_result": "1 if enemy is defeated, 0 otherwise"
 }},
 "Rules": ["Companions can attack whatever targets as they wish to",
-"Base probabilities for various outcomes are given below",
-"The user may use skills they possess. These skills multiply the chance of defeating an enemy by 1.5 but double the chance of fatigue.",
+"Base probabilities (as percents) for various outcomes are given below",
+"The companion can target multiple enemies and therefore produce multiple attacks but the probability of success is multiplied by 0.7 for each",
 "Attacking the opponent with something they are resistant to multiplies the chance of defeating them by 0.5.",
-"Attacking the opponent with something they are weak to doubles the chance of defeating them.",
-"If you feel the user's action is particularly appropriate for the situation multiply the chance of defeating an enemy by 1.2."],
+"Attacking the opponent with something they are weak to doubles the chance of defeating them."],
 
 "User data": {},
 "Companion data": {},
@@ -704,7 +704,8 @@ character = {}
 "defeat": "1 if the character was defeated, 0 otherwise"
 }},
 "Rules": ["Enemies can attack the user or companions as they wish to",
-"Base probabilities for various outcomes are given below",
+"Base probabilities (as percents) for various outcomes are given below",
+"The enemy can have multiple targets (user or companions) and therefore produce multiple attacks but the probability of success is multiplied by 0.7 for each",
 "Attacking the opponent with something they are resistant to multiplies the chance of defeating them by 0.5.",
 "Attacking the opponent with something they are weak to doubles the chance of defeating them.",
 "If a character already has 'severe' injuries and they are injured further then they are defeated."],
@@ -717,5 +718,14 @@ character = {}
 """,
     "user_prompt": """It is the turn of the following enemy to attack:
 {}"""
+  },
+  "level_up_skill": {
+    "system_prompt": """"Role": "You are acting as a game master in a fantasy game world",
+"Task": "The user has leveled up and you are choosing an appropriate skill to reward them",
+"Output": "A string with just one or two words naming the skill",
+
+"User info": {}
+""",
+    "user_prompt": """The user has reached level {}"""
   }
 }
