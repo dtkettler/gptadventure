@@ -194,6 +194,10 @@ def interpret(gpt_control, state, command):
     elif output_json["command"] == "fight" and output_json["success"]:
         do_battle(gpt_control, state, output_json["target"])
         return True
+    elif output_json["command"] == "rest" and output_json["success"]:
+        state.rest()
+        print("You rent a room and rest at the inn")
+        return True
     elif not output_json["success"]:
         return False
     elif output_json["command"] == "unknown":

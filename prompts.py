@@ -417,7 +417,8 @@ location_data = {}"""
   7. 'save_game' - save the game state
   8. 'status' - look at user's status
   9. 'fight' - fight or attack a group of monsters that is on a connection
-  10. 'unknown' - command not understood, anything that isn't one of the above"
+  10. 'rest' - rest at an inn
+  11. 'unknown' - command not understood, anything that isn't one of the above"
 ],
 "Command-specific rules": [
 {{"look_around": [
@@ -462,6 +463,10 @@ location_data = {}"""
   "target is required"
   "the value of target must be the connect_id of the connection that has the group of monsters the user wants to fight",
   "the command fails if there isn't a monster group there"
+]}},
+{{"rest": [
+  "target not needed",
+  "the command fails if the current location is not some sort of inn"
 ]}},
 {{"unknown": [
   "target not needed",

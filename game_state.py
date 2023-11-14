@@ -138,6 +138,20 @@ class State():
                 self.current_node = node
                 new_node = node
                 break
+
+        # as a fallback check by name too
+        if not new_node:
+            for node in self.world["nodes"]:
+                if node["name"] == connect_id:
+                    self.current_node = node
+                    new_node = node
+                    break
+
+        # if it still hasn't been found then something is wrong
+        if not new_node:
+            print("Sorry I could not find that location")
+            return []
+
         for companion in self.companions:
             companion["location_id"] = new_node["unique_id"]
 
@@ -177,3 +191,9 @@ class State():
                 new_monsters.append(group)
 
         self.present_monsters = new_monsters
+
+    def rest(self):
+        self.player["fatigue"] = "none"
+        self.player["injuries"] = "none"
+        self.player["rounds_since_fatigue_change"] = 0
+
