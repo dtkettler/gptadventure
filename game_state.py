@@ -169,3 +169,11 @@ class State():
                 self.player["kills_since_level_up"] = 0
             else:
                 self.player["kills_since_level_up"] = self.player["kills_since_level_up"] + 1
+
+    def clear_monsters(self, target_id):
+        new_monsters = []
+        for group in self.present_monsters:
+            if group["connect_id"] != target_id:
+                new_monsters.append(group)
+
+        self.present_monsters = new_monsters

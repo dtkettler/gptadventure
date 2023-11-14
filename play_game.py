@@ -113,6 +113,7 @@ def do_battle(gpt_control, state, target):
             fled = go_through_attacks(gpt_control, state.get_player_status(), [], monster_group["monsters"])
             if not fled:
                 state.check_for_level_up(monster_levels)
+                state.clear_monsters(target)
             break
 
 def load_game():
