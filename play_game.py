@@ -122,7 +122,7 @@ def do_battle(gpt_control, state, target):
             for monster in monster_group["monsters"]:
                 monster["rounds_attacked"] = 0
                 monster_levels.append(monster["level"])
-            fled = go_through_attacks(gpt_control, state.get_player_status(), [], monster_group["monsters"])
+            fled = go_through_attacks(gpt_control, state.get_player_status(), state.get_companions(), monster_group["monsters"])
             if not fled:
                 leveled = state.check_for_level_up(monster_levels)
                 if leveled:

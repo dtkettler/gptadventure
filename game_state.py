@@ -111,6 +111,17 @@ class State():
     def get_present_monsters(self):
         return self.present_monsters
 
+    def get_companions(self):
+        for companion in self.companions:
+            if "fatigue" not in companion:
+                companion["fatigue"] = "none"
+            if "injuries" not in companion:
+                companion["injuries"] = "none"
+            if "rounds_since_fatigue_change" not in companion:
+                companion["rounds_since_fatigue_change"] = 0
+
+        return self.companions
+
     def add_companion(self, character_id):
         for character in self.world["characters"]:
             if character["unique_id"] == character_id:
