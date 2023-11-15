@@ -15,10 +15,26 @@ class State():
         self.present_monsters = []
 
     def get_location_info(self):
+        companions = []
+        companion_ids = []
+        for companion in self.companions:
+            companions.append({"unique_id": companion["unique_id"],
+                               "name": companion["name"],
+                               "race": companion["race"],
+                               "gender": companion["gender"],
+                               "profession": companion["profession"],
+                               "clothes": companion["clothes"],
+                               "height": companion["height"],
+                               "hair": companion["hair"],
+                               "eyes": companion["eyes"],
+                               "build": companion["build"],
+                               "equipment": companion["equipment"]
+                               })
+            companion_ids.append(companion["unique_id"])
+
         characters = []
         for character in self.world["characters"]:
-            if character["location_id"] == self.current_node["unique_id"]:
-                #characters.append(character)
+            if character["location_id"] == self.current_node["unique_id"] and character["unique_id"] not in companion_ids:
                 characters.append({"unique_id": character["unique_id"],
                                    "name": character["name"],
                                    "race": character["race"],
@@ -32,10 +48,13 @@ class State():
                                    "build": character["build"]
                                    })
 
+        this_json = {"location": self.current_node}
+        if companions:
+            this_json["party_members"] = companions
+        if characters:
+            this_json["characters_present"] = characters
         if self.present_monsters:
-            this_json = {"location": self.current_node, "characters_present": characters, "monster_groups": self.present_monsters}
-        else:
-            this_json = {"location": self.current_node, "characters_present": characters}
+            this_json["monster_groups"] = self.present_monsters
 
         return this_json
 
@@ -112,6 +131,7 @@ class State():
         return self.present_monsters
 
     def get_companions(self):
+        data_out = []
         for companion in self.companions:
             if "fatigue" not in companion:
                 companion["fatigue"] = "none"
@@ -120,7 +140,26 @@ class State():
             if "rounds_since_fatigue_change" not in companion:
                 companion["rounds_since_fatigue_change"] = 0
 
-        return self.companions
+            data_out.append({"unique_id": companion["unique_id"],
+                             "name": companion["name"],
+                             "race": companion["race"],
+                             "gender": companion["gender"],
+                             "profession": companion["profession"],
+                             "level": companion["level"],
+                             "physical_description": companion["physical_description"],
+                             "clothes": companion["clothes"],
+                             "height": companion["height"],
+                             "hair": companion["hair"],
+                             "eyes": companion["eyes"],
+                             "build": companion["build"],
+                             "equipment": companion["equipment"],
+                             "personality": companion["personality"],
+                             "fatigue": companion["fatigue"],
+                             "injuries": companion["injuries"],
+                             "rounds_since_fatigue_change": companion["rounds_since_fatigue_change"]
+                             })
+
+        return data_out
 
     def add_companion(self, character_id):
         for character in self.world["characters"]:
@@ -200,7 +239,7 @@ class State():
                 return True
             else:
                 self.player["kills_since_level_up"] = self.player["kills_since_level_up"] + 1
-                return False
+        return False
 
     def clear_monsters(self, target_id):
         new_monsters = []

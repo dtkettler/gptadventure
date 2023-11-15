@@ -1,14 +1,11 @@
 import json
 import sys
+import random
 
 from prompts import prompts
 
 def calculate_character_attack_prob(character, enemy):
-    prob = 30.0 + (character["level"] - enemy["level"]) * 10.0 + 5.0 * enemy["rounds_attacked"]
-    if prob < 0:
-        prob = 0.0
-    elif prob > 100:
-        prob = 100.0
+    prob = 30.0 + (character["level"] - enemy["level"]) * 10.0 + 10.0 * enemy["rounds_attacked"]
 
     if character["fatigue"] == "slight":
         prob = prob * 0.9
@@ -23,6 +20,11 @@ def calculate_character_attack_prob(character, enemy):
         prob = prob * 0.7
     elif character["injuries"] == "severe":
         prob = prob * 0.5
+
+    if prob < 0:
+        prob = 0.0
+    elif prob > 100:
+        prob = 100.0
 
     return prob
 
@@ -42,19 +44,19 @@ def calculate_enemy_attack_prob(enemy, character):
     if character["injuries"] == "none":
         defeat_prob = 0.0
     elif character["injuries"] == "slight":
-        defeat_prob = 5.0
+        defeat_prob = (enemy["level"] - character["level"]) * 2.0
     elif character["injuries"] == "moderate":
-        defeat_prob = 20.0
+        defeat_prob = (enemy["level"] - character["level"]) * 5.0
     elif character["injuries"] == "severe":
-        defeat_prob = 50.0
+        defeat_prob = (enemy["level"] - character["level"]) * 15.0
 
     return injury_prob, defeat_prob
 
 def calculate_character_fatigue_prob(character):
-    return character["rounds_since_fatigue_change"] * 10.0
+    return character["rounds_since_fatigue_change"] * 5.0
 
 def calculate_flee_prob(player):
-    prob = 0.8
+    prob = 80.0
 
     return prob
 
@@ -80,16 +82,16 @@ def calculate_probabilities(player, companions, enemies):
             enemy_attack_probs.append({"enemy_id": enemy["unique_id"], "enemy_attack_target": companion["unique_id"],
                                        "injury_probability": injury_prob, "defeat_probability": defeat_prob})
 
-    fatigue_probs = []
-    fatigue_probs.append({"id": "user", "fatigue_probability": calculate_character_fatigue_prob(player)})
-    for companion in companions:
-        fatigue_probs.append({"id": companion["unique_id"],
-                              "fatigue_probability": calculate_character_fatigue_prob(companion)})
+    #fatigue_probs = []
+    #fatigue_probs.append({"id": "user", "fatigue_probability": calculate_character_fatigue_prob(player)})
+    #for companion in companions:
+    #    fatigue_probs.append({"id": companion["unique_id"],
+    #                          "fatigue_probability": calculate_character_fatigue_prob(companion)})
 
     probs = {"flee_probability": calculate_flee_prob(player),
              "attack_probabilities": attackers_probs,
-             "enemy_attack_probabilities": enemy_attack_probs,
-             "fatigue_probabilities": fatigue_probs}
+             "enemy_attack_probabilities": enemy_attack_probs}
+             #"fatigue_probabilities": fatigue_probs}
     return probs
 
 def increase_injury(character):
@@ -112,6 +114,16 @@ def increase_fatigue(character):
         character["fatigue"] = "moderate"
     elif character["fatigue"] == "moderate":
         character["fatigue"] = "severe"
+
+    character["rounds_since_fatigue_change"] = 0
+
+def check_fatigue(character):
+    prob = calculate_character_fatigue_prob(character) / 100.0
+    ran = random.random()
+    if ran < prob:
+        increase_fatigue(character)
+    else:
+        character["rounds_since_fatigue_change"] += 1
 
 def update_combat_stats(response_json, player, companions, enemies):
     enemies_to_remove = []
@@ -203,9 +215,11 @@ def go_through_attacks(gpt_control, player, companions, enemies):
 
         print(response_json["description"])
 
-        if "fatigued" in response_json and response_json["fatigued"]:
-            increase_fatigue(player)
-        player["rounds_since_fatigue_change"] += 1
+        #if "fatigued" in response_json and response_json["fatigued"]:
+        #    increase_fatigue(player)
+        #player["rounds_since_fatigue_change"] += 1
+        if "attacks" in response_json and response_json["attacks"]:
+            check_fatigue(player)
 
         companions, enemies, battle_finished = update_combat_stats(response_json, player, companions, enemies)
 
@@ -214,6 +228,7 @@ def go_through_attacks(gpt_control, player, companions, enemies):
             break
 
         for companion in companions:
+            probs = calculate_probabilities(player, companions, enemies)
             system_prompt = prompts["fight_companion"]["system_prompt"].format(json.dumps(player),
                                                                                json.dumps(companions),
                                                                                json.dumps(enemies),
@@ -230,13 +245,16 @@ def go_through_attacks(gpt_control, player, companions, enemies):
 
             print(response_json["description"])
 
-            if "fatigued" in response_json and response_json["fatigued"]:
-                increase_fatigue(companion)
-            companion["rounds_since_fatigue_change"] += 1
+            #if "fatigued" in response_json and response_json["fatigued"]:
+            #    increase_fatigue(companion)
+            #companion["rounds_since_fatigue_change"] += 1
+            if "attacks" in response_json and response_json["attacks"]:
+                check_fatigue(companion)
 
             companions, enemies, battle_finished = update_combat_stats(response_json, player, companions, enemies)
 
         for enemy in enemies:
+            probs = calculate_probabilities(player, companions, enemies)
             system_prompt = prompts["fight_enemy"]["system_prompt"].format(json.dumps(player),
                                                                            json.dumps(companions),
                                                                            json.dumps(enemies),

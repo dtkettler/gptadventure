@@ -80,6 +80,9 @@ def spawn_monsters(gpt_control, state, monster_spawns):
         min_level = "4"
         max_level = "8"
         setting_monsters = state.get_monsters()["dungeon_monsters"]
+    else:
+        state.set_present_monsters([])
+        return
 
     system_prompt = prompts["spawn_monsters"]["system_prompt"].format(min_level, max_level, setting_monsters,
                                                                       json.dumps(location_info))
@@ -124,16 +127,20 @@ def do_battle(gpt_control, state, target):
                 monster_levels.append(monster["level"])
             fled = go_through_attacks(gpt_control, state.get_player_status(), state.get_companions(), monster_group["monsters"])
             if not fled:
-                leveled = state.check_for_level_up(monster_levels)
-                if leveled:
-                    status = state.get_player_status()["level"]
-                    new_skill = gpt_control.run_gpt(prompts["level_up_skill"]["system_prompt"].format(json.dumps(status)),
-                                                    prompts["level_up_skill"]["user_prompt"].format(status["level"]),
-                                                    temperature=0.8)
-                    print("You learned {}!".format(new_skill))
-                    state.add_skill(new_skill)
+                leveling(gpt_control, state, monster_levels)
                 state.clear_monsters(target)
             break
+
+def leveling(gpt_control, state, monster_levels):
+    leveled = state.check_for_level_up(monster_levels)
+    if leveled:
+        status = state.get_player_status()
+        new_skill = gpt_control.run_gpt(prompts["level_up_skill"]["system_prompt"].format(json.dumps(status)),
+                                        prompts["level_up_skill"]["user_prompt"].format(status["level"]),
+                                        temperature=0.8, json=True)
+        new_skill = json.loads(new_skill)
+        print("You learned {}!".format(new_skill['name']))
+        state.add_skill(new_skill)
 
 def load_game():
     good_file = False
@@ -166,6 +173,7 @@ def display_status(state):
     print("Level: {}".format(player["level"]))
     print("Fatigue: {}".format(player["fatigue"]))
     print("Injuries: {}".format(player["injuries"]))
+    print("Skills: {}".format(", ".join([skill['name'] for skill in player["skills"]])))
     print("Equipment: {}".format(", ".join(player["equipment"])))
     print("Inventory: {}".format(", ".join(player["inventory"])))
 
@@ -203,6 +211,8 @@ def interpret(gpt_control, state, command):
         monsters = state.update_current_location(output_json["target"])
         if monsters:
             spawn_monsters(gpt_control, state, monsters)
+        else:
+            state.set_present_monsters([])
         return True
     elif output_json["command"] == "talk" and output_json["success"]:
         talk_to(gpt_control, state, output_json["target"])

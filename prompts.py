@@ -390,7 +390,7 @@ location = {}
   },
   "look_around": {
     "system_prompt": """You are a narrator for a text-based adventure game.
-Describe the location, connections, and any characters present (if any) from the given data in roughly one paragraph"""
+Describe the location, connections, and any party members or characters present (if any) from the given data in roughly one paragraph"""
   },
   "look_at": {
     "system_prompt": """You are a narrator for a text-based adventure game.
@@ -649,7 +649,6 @@ character = {}
     "system_prompt": """"Role": "You are refereeing and narrating a battle in a fantasy game world",
 "Task": "It's the user's turn to attack, based on their actions, output a JSON object that describes one round of the battle",
 "Output format": {{"attacks": "Required, a list of attacks by the user against enemies. Follows 'attack format'.",
-"fatigued": "Required, 1 if the user is fatigued, 0 otherwise",
 "fled": "Required, 1 is the user successfully flees, 0 otherwise",
 "description": "Required, write a sentence or two describing what happens in this round of the fight."
 }},
@@ -664,7 +663,8 @@ character = {}
 "The user may use skills they possess. These skills multiply the chance of defeating an enemy by 1.5 but double the chance of fatigue.",
 "Attacking the opponent with something they are resistant to multiplies the chance of defeating them by 0.5.",
 "Attacking the opponent with something they are weak to doubles the chance of defeating them.",
-"If you feel the user's action is particularly appropriate for the situation multiply the chance of defeating an enemy by 1.2."],
+"If you feel the user's action is particularly appropriate for the situation multiply the chance of defeating an enemy by 1.2.",
+"If the user takes no action just return an empty list for 'attacks'."],
 
 "User data": {},
 "Companion data": {},
@@ -677,7 +677,6 @@ character = {}
     "system_prompt": """"Role": "You are refereeing and narrating a battle in a fantasy game world",
 "Task": "It is one of the user's companions' turn to attack, output a JSON object that describes one round of the battle",
 "Output format": {{"attacks": "Required, a list of attacks by the user against enemies. Follows 'attack format'.",
-"fatigued": "Required, 1 if the companion is fatigued, 0 otherwise",
 "description": "Required, write a sentence or two describing what happens in this round of the fight."
 }},
 "attack format": {{"attacker_id": "either 'user' or unique_id of companion",
@@ -688,7 +687,8 @@ character = {}
 "Base probabilities (as percents) for various outcomes are given below",
 "The companion can target multiple enemies and therefore produce multiple attacks but the probability of success is multiplied by 0.7 for each",
 "Attacking the opponent with something they are resistant to multiplies the chance of defeating them by 0.5.",
-"Attacking the opponent with something they are weak to doubles the chance of defeating them."],
+"Attacking the opponent with something they are weak to doubles the chance of defeating them.",
+"If the character takes no action just return an empty list for 'attacks'."],
 
 "User data": {},
 "Companion data": {},
@@ -728,7 +728,9 @@ character = {}
   "level_up_skill": {
     "system_prompt": """"Role": "You are acting as a game master in a fantasy game world",
 "Task": "The user has leveled up and you are choosing an appropriate skill to reward them",
-"Output": "A string with just one or two words naming the skill",
+"Output": "A JSON object with two fields:
+1. name - Just one or two words naming the skill
+2. element - Element of the skill, or 'physical' if it's purely physical",
 
 "User info": {}
 """,
