@@ -1,6 +1,6 @@
 import json
 import gpt
-from prompts import prompts
+from generation_prompts import prompts
 
 
 gpt_control = gpt.GPT()

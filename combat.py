@@ -2,7 +2,7 @@ import json
 import sys
 import random
 
-from prompts import prompts
+from gameplay_prompts import prompts
 
 def calculate_character_attack_prob(character, enemy):
     prob = 30.0 + (character["level"] - enemy["level"]) * 10.0 + 10.0 * enemy["rounds_attacked"]
