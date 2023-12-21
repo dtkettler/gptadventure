@@ -67,8 +67,9 @@ cription": "Required, one second-person sentence describing the action that is b
   8. 'status' - look at user's status
   9. 'fight' - fight or attack a group of monsters that is on a connection
   10. 'rest' - rest at an inn
-  11. 'emote' - any action of gesture not listed above
-  12. 'unknown' - command not understood, anything that isn't one of the above"
+  11. 'quests' - check log of accepted quests
+  12. 'emote' - any action of gesture not listed above
+  13. 'unknown' - command not understood, anything that isn't one of the above"
 ],
 "Command-specific rules": [
 {{"look_around": [
@@ -118,6 +119,10 @@ cription": "Required, one second-person sentence describing the action that is b
 {{"rest": [
   "target not needed",
   "the command fails if the current location is not some sort of inn"
+]}},
+{{"quests": [
+  "target not needed",
+  "always succeeds"
 ]}},
 {{"emote": [
   "target not needed".
@@ -245,7 +250,7 @@ character = {}
   "fight_enemy": {
     "system_prompt": """"Role": "You are refereeing and narrating a battle in a fantasy game world",
 "Task": "It is one of the enemy's turn to attack, output a JSON object that describes one round of the battle",
-"Output format": {{""enemy_attacks": "Required, a list of attacks by enemies against the user or companions.  Follows 'enemy attack format'.",
+"Output format": {{"enemy_attacks": "Required, a list of attacks by enemies against the user or companions.  Follows 'enemy attack format'.",
 "description": "Required, write a sentence or two describing what happens in this round of the fight."
 }},
 "enemy attack format": {{"enemy_id": "unique_id of the enemy attacking",
@@ -279,5 +284,112 @@ character = {}
 "User info": {}
 """,
     "user_prompt": """The user has reached level {}"""
+  },
+  "generate_quest": {
+      "system_prompt": """"Role": "You are a game master generating new quests that occur within the setting described below",
+"Task": "Create a new quest with the appropriate parameters in JSON format",
+"Output format": {{"quest_giver": "Name of a new NPC who the quest is for",
+"giver_location": "unique_id of the map node where the quest giver is",
+"urgency": "Either 'normal' or 'urgent'",
+"type": "One of the following: 'gather', 'defeat', 'rescue'",
+"target": "The target of the quest. Exactly what it is depends on the quest type.",
+"location": "unique_id of the map node where this quest takes place",
+"base_reward": "Base amount of gold for the quest reward",
+"short_description": "A one-sentence description of the quest"
+}},
+"Rules": ["Make sure the new quest is distinct from existing quests",
+"A particular quest giver can only be responsible for one quest at a time",
+"giver_location must be of type 'town' or 'indoor'",
+"location must be of type 'field' or 'dungeon'",
+"target must be something to gather if quest type is 'gather', a type of monster if quest type is 'defeat', or the name or an original NPC if quest type is 'rescue'",
+"base_reward is a random amount that varies with the quest type and urgency:
+1. for 'gather' base_reward should be between 50 and 100
+2. for 'defeat' base_reward should be between 100 and 200
+3. for 'rescue' base_reward should be between 200 and 300
+If 'urgency' is 'urgent' then double base_reward"],
+
+"Setting data": {},
+"Monster data": {},
+"Map data": {},
+"Existing quests": {}
+""",
+      "user_prompt": "Generate information for a new quest"
+  },
+  "generate_quest_flavor_text": {
+      "system_prompt": """"Role": "You are the game master generating information about a quest for the player",
+"Task": "Create flavor text and background information about the quest based on the provided setting and quest parameters in JSON format",
+"Output format": {{"flavor_text": "A more detailed description of what exactly needs to be done in the quest",
+"background": "Required, a short description of how this quest came about" 
+}},
+"Rules": ["Both 'flavor_text' and 'background' are required"]
+
+"Setting data": {},
+"Monster data": {},
+"Quest data": {}
+""",
+      "user_prompt": "Generate flavor text for the new quest"
+  },
+  "generate_quest_npc": {
+      "system_prompt": """"Role": "You are the game master generating information about an NPC who is providing the player with a quest",
+"Task": "Generate information about the NPC who is giving the quest based on the setting and quest parameters in JSON format",
+"Output format": {{"unique_id": "Unique ID for this quest giver",
+"npc_type": "Always 'quest_giver'",
+"race": "The NPC's race (human, elf, dwarf, etc.)",
+"gender": "The NPC's gender",
+"physical_description": "a one or two sentence description of what the character looks like",
+"personality": "a one or two sentence description of this character's personality"
+}}
+
+"Setting data": {},
+"Quest data": {}
+""",
+      "user_prompt": "Generate information about the NPC who is giving the new quest"
+  },
+  "talk_to_quest_giver": {
+    "system_prompt": """Act in first person as the character described below.
+Furthermore you have the goal of trying to convince the user to accept the quest described below.
+If the quest is accepted you don't feel the desire to continue the conversation.
+So long as the quest is not accepted you can be aggressive.
+If the user asks about a reward the default amount is base_reward gold coins but there is room for negotiation.
+
+character = {}
+quest = {}
+""",
+    "function": {
+        "name": "conversation_with_quest_acceptance",
+        "description": "Get the text of the conversation and add a flag to indicate whether or not it is over.  Also indicate whether or not the quest is accepted.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "message": {
+                    "type": "string",
+                    "description": "The text of the message the character is saying"
+                },
+                "finish": {
+                    "type": "integer",
+                    "description": "Should be 0 the majority of the time as the conversation continues and only set to 1 if the conversation is over, either because the user is asking to end the conversation or if the character no longer wishes to talk to the user."
+                },
+                "accept_quest": {
+                    "type": "integer",
+                    "description": "Should be 0 if the quest has not yet been accepted (default condition), but set it to 1 once it is."
+                },
+                "reward_amount": {
+                    "type": "integer",
+                    "description": "If the quest is accepted, this is the agreed upon reward.  If the reward was not negotiated then just use the base_reward as a default."
+                }
+            },
+            "required": ["message", "finish", "accept_quest"]
+        }
+    }
+  },
+  "urgent_quest_callout": {
+      "system_prompt": """Act as the character described below.
+You are approaching the player for the first time, attempting to get them to accept the urgent quest described below.
+You do not know the user yet so refer to them in second person or as "adventurer".
+
+character = {}
+quest = {}
+""",
+      "user_prompt": "Describe the character approaching the user followed by one line of dialogue as they call out to the user"
   }
 }

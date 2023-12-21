@@ -92,14 +92,23 @@ class Game:
         character["skills"] = json.loads(char_stats)["skills"]
         self.state.set_player(character)
 
-    def main(self):
+    def main(self, num_quests=5):
         print("Welcome adventurer!")
 
         look = True
         playing = True
         while playing:
+            while self.state.get_num_quests() < num_quests:
+                self.generate_quest()
+
             if look:
                 self.look_around()
+
+            urgent_quests = self.state.get_urgent_quests_at_location()
+            if urgent_quests:
+                for urgent_quest in urgent_quests:
+                    self.start_urgent_conversation(urgent_quest)
+
             command = input("What would you like to do? ")
             look = self.interpret(command)
 
@@ -171,7 +180,10 @@ class Game:
                 self.state.set_present_monsters([])
             return True
         elif output_json["command"] == "talk" and output_json["success"]:
-            self.talk_to(output_json["target"])
+            if self.state.character_is_npc(output_json["target"]):
+                self.talk_to(output_json["target"])
+            elif self.state.character_is_quest_giver(output_json["target"]):
+                self.talk_to_quest_giver(output_json["target"])
             return True
         elif output_json["command"] == "invite" and output_json["success"]:
             self.invite(output_json["target"])
@@ -183,6 +195,8 @@ class Game:
             self.state.rest()
             print("You rent a room and rest at the inn")
             return True
+        elif output_json["command"] == "quests":
+            self.list_quests()
         elif not output_json["success"]:
             return False
         elif output_json["command"] == "unknown":
@@ -208,6 +222,41 @@ class Game:
             print(response["message"])
             if response["finish"]:
                 dialogue = False
+
+    def talk_to_quest_giver(self, target):
+        quest = self.state.get_quest_from_char(target)
+        character = quest["npc"]
+
+        dialogue = True
+        while dialogue:
+            command = input("What would you like to say? ")
+
+            response = self.gpt_control.run_gpt_with_history(prompts["talk_to_quest_giver"]["system_prompt"].format(json.dumps(character),
+                                                                                                                    json.dumps(quest)),
+                                                             command, self.state.get_character_history(character),
+                                                             functions=[prompts["talk_to_quest_giver"]["function"]])
+            self.state.update_character_history(character, command, response["message"])
+
+            print(response["message"])
+            if response["finish"]:
+                dialogue = False
+
+        if response["accept_quest"]:
+            if "reward_amount" in response:
+                reward = response["reward_amount"]
+            else:
+                reward = quest["base_reward"]
+            self.state.accept_quest(quest["quest_id"], reward)
+
+    def start_urgent_conversation(self, quest):
+        character = quest["npc"]
+        output = self.gpt_control.run_gpt(prompts["urgent_quest_callout"]["system_prompt"].format(json.dumps(character),
+                                                                                                  json.dumps(quest)),
+                                          prompts["urgent_quest_callout"]["user_prompt"],
+                                          temperature=0.6, json=False)
+        print(output)
+        quest["urgency"] = "urgent_but_conversed"
+        self.talk_to_quest_giver(character["unique_id"])
 
     def invite(self, target):
         character = self.state.get_character(target)
@@ -309,6 +358,51 @@ class Game:
         print("Equipment: {}".format(", ".join(player["equipment"])))
         print("Inventory: {}".format(", ".join(player["inventory"])))
 
+    def generate_quest(self):
+        setting = json.dumps(self.state.get_setting())
+        monsters = json.dumps(self.state.get_monsters())
+        map_info = json.dumps(self.state.get_map())
+        existing_quests = json.dumps(self.state.get_quests_overview())
+
+        quest = self.gpt_control.run_gpt(prompts["generate_quest"]["system_prompt"].format(setting, monsters, map_info, existing_quests),
+                                         prompts["generate_quest"]["user_prompt"],
+                                         temperature=0.8, json=True)
+        quest_json = json.loads(quest)
+        quest_json["quest_id"] = "q{}".format(self.state.get_quest_counter())
+
+        flavor_text = self.gpt_control.run_gpt(prompts["generate_quest_flavor_text"]["system_prompt"].format(setting, monsters,
+                                                                                                             quest),
+                                               prompts["generate_quest_flavor_text"]["user_prompt"],
+                                               temperature=0.8, json=True)
+        flavor_text_json = json.loads(flavor_text)
+
+        quest_json["flavor_text"] = flavor_text_json["flavor_text"]
+        if "background" in flavor_text_json:
+            quest_json["background"] = flavor_text_json["background"]
+
+        quest_npc = self.gpt_control.run_gpt(prompts["generate_quest_npc"]["system_prompt"].format(setting, quest),
+                                             prompts["generate_quest_npc"]["user_prompt"],
+                                             temperature=0.8, json=True)
+        quest_npc_json = json.loads(quest_npc)
+
+        quest_npc_json["name"] = quest_json["quest_giver"]
+
+        quest_json["npc"] = quest_npc_json
+
+        quest_json["status"] = "not_accepted"
+
+        self.state.add_quest(quest_json)
+
+    def list_quests(self):
+        accepted_quests = self.state.get_accepted_quests()
+        if not accepted_quests:
+            print("You have not accepted any quests")
+        else:
+            for quest in accepted_quests:
+                print("Quest: {}".format(quest["short_description"]))
+                print("Given by: {}".format(quest["quest_giver"]))
+                status = "In progress" if quest["status"] == "accepted" else "Complete"
+                print("Status: {}".format(status))
 
 def game_start():
     gpt_control = gpt.GPT()

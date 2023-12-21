@@ -13,6 +13,8 @@ class State():
         self.player = None
         self.companions = []
         self.present_monsters = []
+        self.quests = []
+        self.quest_count = 0
 
     def get_location_info(self):
         companions = []
@@ -48,6 +50,10 @@ class State():
                                    "build": character["build"]
                                    })
 
+        for quest in self.quests:
+            if quest["giver_location"] == self.current_node["unique_id"]:
+                characters.append(quest["npc"])
+
         this_json = {"location": self.current_node}
         if companions:
             this_json["party_members"] = companions
@@ -63,6 +69,21 @@ class State():
 
     def get_setting(self):
         return self.world["setting"]
+
+    def get_map(self, short=True):
+        if short:
+            nodes = []
+            for node in self.world["nodes"]:
+                # Include everything but detailed_description
+                nodes.append({"unique_id": node["unique_id"],
+                              "name": node["name"],
+                              "type": node["type"],
+                              "description": node["description"],
+                              "connections": node["connections"]})
+
+            return nodes
+        else:
+            return self.world["nodes"]
 
     def get_boss_info(self):
         return self.world["monsters"]["dungeon_boss"]
@@ -160,6 +181,28 @@ class State():
                              })
 
         return data_out
+
+    def get_num_quests(self):
+        if not self.quests:
+            return 0
+        else:
+            return len(self.quests)
+
+    def get_accepted_quests(self):
+        out = []
+        for quest in self.quests:
+            if quest["status"] == "accepted" or quest["status"] == "complete":
+                out.append(quest)
+
+        return out
+
+    def get_urgent_quests_at_location(self):
+        out = []
+        for quest in self.quests:
+            if quest["giver_location"] == self.current_node["unique_id"] and quest["urgency"] == "urgent":
+                out.append(quest)
+
+        return out
 
     def add_companion(self, character_id):
         for character in self.world["characters"]:
@@ -259,5 +302,55 @@ class State():
             companion["injuries"] = "none"
             companion["rounds_since_fatigue_change"] = 0
 
+    def character_is_npc(self, target):
+        for character in self.world["characters"]:
+            if character["unique_id"] == target or character["name"] == target:
+                return True
+
+        return False
+
+    def character_is_quest_giver(self, target):
+        for quest in self.quests:
+            if quest["npc"]["unique_id"] == target:
+                return True
+
+        return False
+
+    def get_quests_overview(self):
+        out = []
+        for quest in self.quests:
+            out.append({"quest_id": quest["quest_id"],
+                        "quest_giver": quest["quest_giver"],
+                        "giver_location": quest["giver_location"],
+                        "urgency": quest["urgency"],
+                        "type": quest["type"],
+                        "target": quest["target"],
+                        "location": quest["location"],
+                        "base_reward": quest["base_reward"],
+                        "short_description": quest["short_description"]})
+
+    def get_quest_from_char(self, target):
+        for quest in self.quests:
+            if quest["npc"]["unique_id"] == target:
+                return quest
+
+        return None
+
     def add_skill(self, skill):
         self.player["skills"].append(skill)
+
+    def add_quest(self, quest):
+        if not self.quests:
+            self.quests = [quest]
+        else:
+            self.quests.append(quest)
+
+    def accept_quest(self, quest_id, agreed_reward):
+        for quest in self.quests:
+            if quest["quest_id"] == quest_id:
+                quest["status"] = "accepted"
+                quest["reward"] = agreed_reward
+
+    def get_quest_counter(self):
+        self.quest_count += 1
+        return self.quest_count
