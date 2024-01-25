@@ -2,15 +2,15 @@ import json
 import sys
 import pickle
 
-import gpt
+from llm_selector import get_llm
 from gameplay_prompts import prompts
 from game_state import State
 from combat import go_through_attacks
 
 
 class Game:
-    def __init__(self, gpt_control):
-        self.gpt_control = gpt_control
+    def __init__(self, llm_control):
+        self.llm_control = llm_control
         self.state = None
 
     def new_game(self):
@@ -65,7 +65,7 @@ class Game:
                          "gender": char_gender,
                          "description": char_description}
 
-            char_check = self.gpt_control.run_gpt(prompts["character_check"]["system_prompt"],
+            char_check = self.llm_control.run_llm(prompts["character_check"]["system_prompt"],
                                                   prompts["character_check"]["user_prompt"].format(self.state.get_setting(),
                                                                                                    json.dumps(character)),
                                                   temperature=0.2, json=True)
@@ -79,7 +79,7 @@ class Game:
 
         accept_equipment = False
         while not accept_equipment:
-            char_stats = self.gpt_control.run_gpt(prompts["player_starting"]["system_prompt"],
+            char_stats = self.llm_control.run_llm(prompts["player_starting"]["system_prompt"],
                                                   prompts["player_starting"]["user_prompt"].format(self.state.get_setting(),
                                                                                                    json.dumps(character)),
                                                   temperature=0.7, json=True)
@@ -124,7 +124,7 @@ class Game:
                 user_prompt += "A group of monsters blocks the path to {}:\n{}\n".format(group["connect_id"],
                                                                                          json.dumps(group["monsters"]))
 
-        description = self.gpt_control.run_gpt(prompts["look_around"]["system_prompt"], user_prompt)
+        description = self.llm_control.run_llm(prompts["look_around"]["system_prompt"], user_prompt)
         print(description)
 
     def look_at(self, command):
@@ -139,14 +139,14 @@ class Game:
                 system_prompt += "A group of monsters blocks the path to {}:\n{}\n".format(group["connect_id"],
                                                                                            json.dumps(group["monsters"]))
 
-        description = self.gpt_control.run_gpt(system_prompt, command)
+        description = self.llm_control.run_llm(system_prompt, command)
         print(description)
 
     def interpret(self, command):
         location_info = json.dumps(self.state.get_location_info())
         prompt = prompts["interpret_command"]["system_prompt"].format(location_info)
 
-        output = self.gpt_control.run_gpt(prompt, command, temperature=0.3, json=True)
+        output = self.llm_control.run_llm(prompt, command, temperature=0.3, json=True)
         # print(output)
         output_json = json.loads(output)
         print(output_json["description"])
@@ -212,7 +212,7 @@ class Game:
 
             attitude = self.state.get_character_attitude(character["unique_id"])
 
-            response = self.gpt_control.run_gpt_with_history(prompts["talk_to"]["system_prompt"].format(attitude,
+            response = self.llm_control.run_llm_with_history(prompts["talk_to"]["system_prompt"].format(attitude,
                                                                                                         json.dumps(character)),
                                                              command, self.state.get_character_history(character),
                                                              functions=[prompts["talk_to"]["function"]])
@@ -231,7 +231,7 @@ class Game:
         while dialogue:
             command = input("What would you like to say? ")
 
-            response = self.gpt_control.run_gpt_with_history(prompts["talk_to_quest_giver"]["system_prompt"].format(json.dumps(character),
+            response = self.llm_control.run_llm_with_history(prompts["talk_to_quest_giver"]["system_prompt"].format(json.dumps(character),
                                                                                                                     json.dumps(quest)),
                                                              command, self.state.get_character_history(character),
                                                              functions=[prompts["talk_to_quest_giver"]["function"]])
@@ -250,7 +250,7 @@ class Game:
 
     def start_urgent_conversation(self, quest):
         character = quest["npc"]
-        output = self.gpt_control.run_gpt(prompts["urgent_quest_callout"]["system_prompt"].format(json.dumps(character),
+        output = self.llm_control.run_llm(prompts["urgent_quest_callout"]["system_prompt"].format(json.dumps(character),
                                                                                                   json.dumps(quest)),
                                           prompts["urgent_quest_callout"]["user_prompt"],
                                           temperature=0.6, json=False)
@@ -262,7 +262,7 @@ class Game:
         character = self.state.get_character(target)
         attitude = self.state.get_character_attitude(character["unique_id"])
 
-        response = self.gpt_control.run_gpt_with_history(
+        response = self.llm_control.run_llm_with_history(
             prompts["invite"]["system_prompt"].format(attitude, json.dumps(character)),
             prompts["invite"]["user_prompt"], self.state.get_character_history(character),
             functions=[prompts["invite"]["function"]])
@@ -292,7 +292,7 @@ class Game:
         all_monsters = []
         for monster_spawn in monster_spawns:
             user_prompt = prompts["spawn_monsters"]["user_prompt"].format(monster_spawn)
-            monster_output = self.gpt_control.run_gpt(system_prompt, user_prompt, temperature=0.8, json=True)
+            monster_output = self.llm_control.run_llm(system_prompt, user_prompt, temperature=0.8, json=True)
 
             monster_json = json.loads(monster_output)
             for monster in monster_json["monsters"]:
@@ -328,7 +328,7 @@ class Game:
                 for monster in monster_group["monsters"]:
                     monster["rounds_attacked"] = 0
                     monster_levels.append(monster["level"])
-                fled = go_through_attacks(self.gpt_control, self.state.get_player_status(), self.state.get_companions(),
+                fled = go_through_attacks(self.llm_control, self.state.get_player_status(), self.state.get_companions(),
                                           monster_group["monsters"])
                 if not fled:
                     self.leveling(monster_levels)
@@ -339,7 +339,7 @@ class Game:
         leveled = self.state.check_for_level_up(monster_levels)
         if leveled:
             status = self.state.get_player_status()
-            new_skill = self.gpt_control.run_gpt(prompts["level_up_skill"]["system_prompt"].format(json.dumps(status)),
+            new_skill = self.llm_control.run_llm(prompts["level_up_skill"]["system_prompt"].format(json.dumps(status)),
                                                  prompts["level_up_skill"]["user_prompt"].format(status["level"]),
                                                  temperature=0.8, json=True)
             new_skill = json.loads(new_skill)
@@ -364,13 +364,13 @@ class Game:
         map_info = json.dumps(self.state.get_map())
         existing_quests = json.dumps(self.state.get_quests_overview())
 
-        quest = self.gpt_control.run_gpt(prompts["generate_quest"]["system_prompt"].format(setting, monsters, map_info, existing_quests),
+        quest = self.llm_control.run_llm(prompts["generate_quest"]["system_prompt"].format(setting, monsters, map_info, existing_quests),
                                          prompts["generate_quest"]["user_prompt"],
                                          temperature=0.8, json=True)
         quest_json = json.loads(quest)
         quest_json["quest_id"] = "q{}".format(self.state.get_quest_counter())
 
-        flavor_text = self.gpt_control.run_gpt(prompts["generate_quest_flavor_text"]["system_prompt"].format(setting, monsters,
+        flavor_text = self.llm_control.run_llm(prompts["generate_quest_flavor_text"]["system_prompt"].format(setting, monsters,
                                                                                                              quest),
                                                prompts["generate_quest_flavor_text"]["user_prompt"],
                                                temperature=0.8, json=True)
@@ -380,7 +380,7 @@ class Game:
         if "background" in flavor_text_json:
             quest_json["background"] = flavor_text_json["background"]
 
-        quest_npc = self.gpt_control.run_gpt(prompts["generate_quest_npc"]["system_prompt"].format(setting, quest),
+        quest_npc = self.llm_control.run_llm(prompts["generate_quest_npc"]["system_prompt"].format(setting, quest),
                                              prompts["generate_quest_npc"]["user_prompt"],
                                              temperature=0.8, json=True)
         quest_npc_json = json.loads(quest_npc)
@@ -405,7 +405,7 @@ class Game:
                 print("Status: {}".format(status))
 
 def game_start():
-    gpt_control = gpt.GPT()
+    llm_control = get_llm()
 
     good_response = False
     while not good_response:
@@ -415,7 +415,7 @@ def game_start():
         if newload == "n" or newload == "l":
             good_response = True
 
-    game = Game(gpt_control)
+    game = Game(llm_control)
     if newload == "n":
         game.new_game()
     elif newload == "l":

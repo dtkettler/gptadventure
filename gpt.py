@@ -20,7 +20,7 @@ class GPT:
         #self.model = "gpt-3.5-turbo"
         #self.long_model = "gpt-3.5-turbo-16k"
         self.model = "gpt-3.5-turbo-1106"
-        self.long_model = "gpt-3.5-turbo-1106"
+        #self.long_model = "gpt-3.5-turbo-1106"
         self.lower_token_count = 3500
 
     def completion_with_retries(self, model, messages, temperature=0.5, max_retries=10, functions=None, json=False):
@@ -50,10 +50,10 @@ class GPT:
 
         return completion
 
-    def run_gpt(self, system_prompt, user_prompt, temperature=0.5, force_long=False, json=False):
+    def run_llm(self, system_prompt, user_prompt, temperature=0.5, json=False):
         openai.api_key = self.api_key
         completion = self.completion_with_retries(
-            model=self.get_model(system_prompt + user_prompt, force_long),
+            model=self.model,
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt}
@@ -66,7 +66,7 @@ class GPT:
 
         return output
 
-    def run_gpt_with_history(self, system_prompt, user_prompt, history, temperature=0.5, force_long=False, functions=None):
+    def run_llm_with_history(self, system_prompt, user_prompt, history, temperature=0.5, functions=None):
         openai.api_key = self.api_key
 
         messages = [{"role": "system", "content": system_prompt}]
@@ -80,7 +80,7 @@ class GPT:
             total_prompt += message["content"]
 
         completion = self.completion_with_retries(
-            model=self.get_model(total_prompt, force_long),
+            model=self.model,
             messages=messages,
             temperature=temperature,
             functions=functions
@@ -93,14 +93,3 @@ class GPT:
 
         return output
 
-    def get_model(self, text, force_long):
-        if force_long:
-            return self.long_model
-
-        encoding = tiktoken.encoding_for_model("gpt-3.5-turbo")
-        token_count = len(encoding.encode(text))
-
-        if token_count > self.lower_token_count:
-            return self.long_model
-        else:
-            return self.model

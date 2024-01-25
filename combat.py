@@ -206,7 +206,7 @@ def go_through_attacks(gpt_control, player, companions, enemies):
                                                                       json.dumps(enemies),
                                                                       json.dumps(probs),
                                                                       json.dumps(history))
-        response = gpt_control.run_gpt(system_prompt, action, temperature=0.8, json=True)
+        response = gpt_control.run_llm(system_prompt, action, temperature=0.8, json=True)
 
         #print(response)
 
@@ -235,7 +235,7 @@ def go_through_attacks(gpt_control, player, companions, enemies):
                                                                                json.dumps(probs),
                                                                                json.dumps(history))
 
-            response = gpt_control.run_gpt(system_prompt, prompts["fight_companion"]["user_prompt"].format(companion["name"]),
+            response = gpt_control.run_llm(system_prompt, prompts["fight_companion"]["user_prompt"].format(companion["name"]),
                                            temperature=0.8, json=True)
 
             #print(response)
@@ -261,7 +261,7 @@ def go_through_attacks(gpt_control, player, companions, enemies):
                                                                            json.dumps(probs),
                                                                            json.dumps(history))
 
-            response = gpt_control.run_gpt(system_prompt, prompts["fight_enemy"]["user_prompt"].format(json.dumps(enemy)),
+            response = gpt_control.run_llm(system_prompt, prompts["fight_enemy"]["user_prompt"].format(json.dumps(enemy)),
                                            temperature=0.8, json=True)
 
             #print(response)
